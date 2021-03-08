@@ -1,3 +1,7 @@
+# project specific
+config/ftxconfig.py
+logs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

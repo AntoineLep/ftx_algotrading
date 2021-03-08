@@ -1,6 +1,6 @@
 import unittest
 
-from exceptions.FtxAlgotradingException import FtxAlgotradingException
+from exceptions.ftx_algotrading_exception import FtxAlgotradingException
 
 
 class TestFtxAlgotradingException(unittest.TestCase):
