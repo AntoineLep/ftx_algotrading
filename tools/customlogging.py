@@ -6,7 +6,7 @@ from pathlib import Path
 from tools.utils import expand_var_and_user
 
 
-def init_logger(log_level, log_location, app_name):
+def init_logger(log_level, log_location, app_name) -> None:
     """
     Setup logger
 

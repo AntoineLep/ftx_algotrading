@@ -4,11 +4,11 @@ import os
 from exceptions.ftx_algotrading_exception import FtxAlgotradingException
 
 
-def expand_var_and_user(path):
+def expand_var_and_user(path) -> str:
     return os.path.expanduser(os.path.expandvars(path))
 
 
-def check_fields_in_dict(dictionary, fields, dictionary_name):
+def check_fields_in_dict(dictionary, fields, dictionary_name) -> bool:
     """
     Check that the fields are in the dict and raise an exception if not
 
