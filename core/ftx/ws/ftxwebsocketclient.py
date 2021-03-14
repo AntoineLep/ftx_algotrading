@@ -8,14 +8,14 @@ from typing import DefaultDict, Deque, List, Dict, Tuple, Optional
 from gevent.event import Event
 import config.ftxconfig as ftx_config
 
-from core.ws.websocketmanager import WebsocketManager
+from core.ftx.ws.websocketmanager import WebsocketManager
 
 
 class FtxWebsocketClient(WebsocketManager):
     _ENDPOINT = ftx_config.ws_endpoint
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self):
+        super(FtxWebsocketClient, self).__init__()
         self._trades: DefaultDict[str, Deque] = defaultdict(lambda: deque([], maxlen=10000))
         self._fills: Deque = deque([], maxlen=10000)
         self._api_key = ftx_config.api['key']
@@ -24,7 +24,7 @@ class FtxWebsocketClient(WebsocketManager):
         self._orderbook_update_events: DefaultDict[str, Event] = defaultdict(Event)
         self._reset_data()
 
-    def _on_open(self, ws):
+    def _on_open(self, ws) -> None:
         self._reset_data()
 
     def _reset_data(self) -> None:
@@ -45,8 +45,9 @@ class FtxWebsocketClient(WebsocketManager):
         if market in self._orderbook_timestamps:
             del self._orderbook_timestamps[market]
 
-    def _get_url(self) -> str:
-        return self._ENDPOINT
+    @staticmethod
+    def _get_url() -> str:
+        return FtxWebsocketClient._ENDPOINT
 
     def _login(self) -> None:
         ts = int(time.time() * 1000)

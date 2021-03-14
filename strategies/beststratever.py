@@ -1,8 +1,7 @@
-import copy
 import logging
 import time
 
-from core.strategy.strategy import Strategy
+from core.strategy import Strategy
 
 
 class BestStratEver(Strategy):
@@ -12,17 +11,18 @@ class BestStratEver(Strategy):
         """The best strategy ever constructor"""
         super(BestStratEver, self).__init__()
 
-    def startup(self):
+    def startup(self) -> None:
         """Strategy initialisation"""
         logging.info("BestStratEver startup")
 
-    def run_strategy(self):
+    def run_strategy(self) -> None:
         """The strategy core"""
         logging.info("BestStratEver run_strategy")
 
         while True:
-            time.sleep(5)
+            logging.info(self.ftx_ws_client.get_ticker('BTC-PERP'))
+            time.sleep(2)
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean strategy execution"""
         logging.info("BestStratEver cleanup")

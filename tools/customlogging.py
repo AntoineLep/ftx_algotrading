@@ -49,7 +49,7 @@ def init_logger(log_level, log_location, app_name) -> None:
     logger.addHandler(stream_handler)
 
 
-def _define_log_level(log_level):
+def _define_log_level(log_level) -> str:
     """
     Define the log level
 

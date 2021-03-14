@@ -12,7 +12,8 @@ class WebsocketManager:
         self.connect_lock = Lock()
         self.ws = None
 
-    def _get_url(self):
+    @staticmethod
+    def _get_url():
         raise NotImplementedError()
 
     def _on_message(self, ws, message):

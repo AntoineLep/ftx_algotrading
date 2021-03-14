@@ -3,10 +3,19 @@ class Strategy(object):
 
     def __init__(self):
         """Strategy constructor"""
-        self._crypto_pair_manager_list = None
-        self._lock = None
-        self._k = None
-        self._call_rate_manager = None
+
+        self.ftx_ws_client = None
+        """
+        The ftx web socket client
+        :type: core.ws.ftxwebsocketclient.FtxWebsocketClient
+        """
+
+    def set_ftx_ws_client(self, ftx_ws_client) -> None:
+        """
+        Set the ftx web socket client
+        :param ftx_ws_client: The ftx web socket client
+        """
+        self.ftx_ws_client = ftx_ws_client
 
     def run(self) -> None:
         """Run the strategy"""

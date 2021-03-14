@@ -2,7 +2,7 @@ import os
 import logging
 import config.applicationconfig as application_config
 from tools.customlogging import init_logger
-from core.ws.ftxwebsocketclient import FtxWebsocketClient
+from core.ftx.ws.ftxwebsocketclient import FtxWebsocketClient
 
 if __name__ == '__main__':
     project_path = os.path.dirname(os.path.realpath(__file__))
@@ -22,6 +22,7 @@ if __name__ == '__main__':
 
     try:
         strategy = application_config.strategy
+        strategy.set_ftx_ws_client(ws_client)
         strategy.run()
     except KeyboardInterrupt:
         logging.info("/!\\ Keyboard interruption: Stopping %s V%s" % (application_config.name,

@@ -1,8 +1,3 @@
-"""
-Set of ftx_algotrading exceptions
-"""
-
-
 class FtxAlgotradingException(Exception):
     """Generic exception for ftx_algotrading"""
 
