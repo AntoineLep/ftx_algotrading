@@ -1,5 +1,6 @@
 # project specific
 config/ftxconfig.py
+config/twitterconfig.py
 logs/
 
 # Byte-compiled / optimized / DLL files
