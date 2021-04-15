@@ -1,7 +1,7 @@
 import logging
 import time
 
-from core.strategy import Strategy
+from core.strategy.strategy import Strategy
 
 
 class BestStratEver(Strategy):
@@ -20,7 +20,7 @@ class BestStratEver(Strategy):
         logging.info("BestStratEver run_strategy")
 
         while True:
-            logging.info(self.ftx_ws_client.get_ticker('BTC-PERP'))
+            logging.info(self.ftx_ws_client.get_ticker('DOGE-PERP'))
             time.sleep(2)
 
     def cleanup(self) -> None:

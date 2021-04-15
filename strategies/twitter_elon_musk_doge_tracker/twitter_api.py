@@ -1,6 +1,6 @@
 import requests
 
-import config.twitterconfig as twitter_config
+import config.twitter_config as twitter_config
 
 
 class TwitterApi(object):
@@ -15,15 +15,15 @@ class TwitterApi(object):
         :return: Twitter response
         """
 
-        url = "https://api.twitter.com/2/tweets/search/recent?query={}".format(query)
+        url = f"https://api.twitter.com/2/tweets/search/recent?query={query}"
 
         if tweet_fields is not None:
-            url += "&tweet.fields={}".format(tweet_fields)
+            url += f"&tweet.fields={tweet_fields}"
 
         if since_id is not None:
-            url += "&since_id={}".format(since_id)
+            url += f"&since_id={since_id}"
 
-        headers = {"Authorization": "Bearer {}".format(twitter_config.api["bearer_token"])}
+        headers = {"Authorization": f"Bearer {twitter_config.api['bearer_token']}"}
 
         response = requests.request("GET", url, headers=headers)
 

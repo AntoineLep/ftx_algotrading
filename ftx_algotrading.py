@@ -1,8 +1,8 @@
 import os
 import logging
-import config.applicationconfig as application_config
-from tools.customlogging import init_logger
-from core.ftx.ws.ftxwebsocketclient import FtxWebsocketClient
+import config.application_config as application_config
+from tools.custom_logging import init_logger
+from core.ftx.ws.ftx_websocket_client import FtxWebsocketClient
 
 if __name__ == '__main__':
     project_path = os.path.dirname(os.path.realpath(__file__))

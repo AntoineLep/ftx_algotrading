@@ -1,5 +1,5 @@
-from strategies.beststratever import BestStratEver
 from strategies.twitter_elon_musk_doge_tracker.twitter_elon_musk_doge_tracker import TwitterElonMuskDogeTracker
+from strategies.best_strat_ever.best_strat_ever import BestStratEver
 
 
 name = "ftx_algotrading"

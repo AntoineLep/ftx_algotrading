@@ -1,5 +1,5 @@
-from core.models.identifiedpoint import IdentifiedPoint
-from core.enums.colorenum import ColorEnum
+from core.models.identified_point import IdentifiedPoint
+from core.enums.color_enum import ColorEnum
 
 
 class StockDataPoint(IdentifiedPoint):

@@ -1,9 +1,11 @@
 import time
 import hmac
 import urllib.parse
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from requests import Request, Session, Response
-import config.ftxconfig as ftx_config
+import config.ftx_config as ftx_config
+
+from exceptions.ftx_rest_api_exception import FtxRestApiException
 
 
 api = {
@@ -143,13 +145,13 @@ class FtxRestApi(object):
         self._api_secret = ftx_config.api['secret']
         self._api_sub_account = ftx_config.api['sub_account']
 
-    def _get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
         return self._request('GET', path, params=params)
 
-    def _post(self, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    def post(self, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
         return self._request('POST', path, json=params)
 
-    def _delete(self, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    def delete(self, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
         return self._request('DELETE', path, json=params)
 
     def _request(self, method: str, path: str, **kwargs) -> Any:
@@ -182,5 +184,5 @@ class FtxRestApi(object):
             raise
         else:
             if not data['success']:
-                raise Exception(data['error'])
+                raise FtxRestApiException(data['error'])
             return data['result']

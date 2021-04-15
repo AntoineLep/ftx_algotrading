@@ -1,5 +1,6 @@
 import logging
 import os
+import math
 
 from exceptions.ftx_algotrading_exception import FtxAlgotradingException
 
@@ -23,11 +24,11 @@ def check_fields_in_dict(dictionary, fields, dictionary_name) -> bool:
     for field in fields:
         if field not in dictionary:
             raise FtxAlgotradingException("%s field(s) required but not found in %s: %s"
-                                     % (", ".join(fields), dictionary_name, str(dictionary)))
+                                          % (", ".join(fields), dictionary_name, str(dictionary)))
     return True
 
 
-def format_raw_data(raw_data, time_step, result_key):
+def format_raw_data(raw_data, time_step):
     """
     Format raw data
 
@@ -35,29 +36,21 @@ def format_raw_data(raw_data, time_step, result_key):
     :type raw_data: dict
     :param time_step: The time between each record
     :type time_step: int
-    :param result_key: Key to access data in raw_data dict
-    :type result_key: str
     :return: The formatted data list
     :rtype: list
     """
-    formatted_data = []
-    check_fields_in_dict(raw_data, ["result"], "Raw data")
-    check_fields_in_dict(raw_data["result"], [result_key], "Raw data")
-    for data in raw_data["result"][result_key]:
-        if len(data) == 8:
-            formatted_data.append({
-                "id": int(data[0] / time_step),
-                "time": data[0],
-                "open": float(data[1]),
-                "high": float(data[2]),
-                "low": float(data[3]),
-                "close": float(data[4]),
-                "vwap": float(data[5]),
-                "volume": float(data[6]),
-                "count": data[7]
-            })
-        else:
-            logging.warning("Data should be composed of 8 fields: <time>, <open>, <high>, <low>, <close>, <vwap>, "
-                            "<volume>, <count>")
+    if all(required_field in raw_data for required_field in ["time", "open", "high", "low", "close", "volume"]):
+        return {
+            "id": int(math.floor(raw_data["time"] / 1000) / time_step),
+            "time": math.floor(raw_data["time"] / 1000),
+            "open": float(raw_data["open"]),
+            "high": float(raw_data["high"]),
+            "low": float(raw_data["low"]),
+            "close": float(raw_data["close"]),
+            "volume": float(raw_data["volume"]),
+        }
+    else:
+        logging.warning(
+            "Data should be composed of 6 fields: <startTime>, <open>, <high>, <low>, <close>, <volume>")
 
-    return formatted_data
+    return None
