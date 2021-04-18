@@ -6,7 +6,7 @@ import threading
 from core.strategy.strategy import Strategy
 from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 from core.ftx.rest.ftx_rest_api import FtxRestApi
-from strategies.twitter_elon_musk_doge_tracker.probability import Probability
+from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum
 from core.sotck.crypto_pair_manager import CryptoPairManager
 
 
@@ -20,7 +20,7 @@ class TwitterElonMuskDogeTracker(Strategy):
         self.twitter_api = TwitterApi()
         self.ftx_rest_api = FtxRestApi()
         self.last_tweet = {"id": None, "text": ""}
-        self.last_tweet_doge_oriented_probability = Probability.NOT_PROBABLE
+        self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
         self.first_loop = True
         self.lock = threading.Lock()
         self.doge_manager = None
@@ -39,10 +39,10 @@ class TwitterElonMuskDogeTracker(Strategy):
 
         while True:
             # Init default values
-            self.last_tweet_doge_oriented_probability = Probability.NOT_PROBABLE
+            self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
             self.fetch_tweets()
 
-            if self.last_tweet_doge_oriented_probability is not Probability.NOT_PROBABLE:
+            if self.last_tweet_doge_oriented_probability is not ProbabilityEnum.NOT_PROBABLE:
                 # TODO:
                 # create an order decision maker
                 # will have to take a decision within a given time, given a dict of indicators
@@ -79,7 +79,7 @@ class TwitterElonMuskDogeTracker(Strategy):
         logging.info("Processing new tweet:")
         logging.info(json.dumps(last_tweet, indent=4, sort_keys=True))
 
-        doge_related_words = ['doge', 'moon', 'dog', 'shiba']
+        doge_related_words = ["doge", "moon", "dog", "shiba"]
         last_tweet["text"] = last_tweet["text"].lower()
 
         tweet_contains_attachment = "attachments" in last_tweet
@@ -87,11 +87,11 @@ class TwitterElonMuskDogeTracker(Strategy):
         tweet_contains_doge_related_words = any(word in last_tweet["text"] for word in doge_related_words)
 
         if tweet_contains_doge_related_words:  # Doge related text
-            self.last_tweet_doge_oriented_probability = Probability.PROBABLE
+            self.last_tweet_doge_oriented_probability = ProbabilityEnum.PROBABLE
         elif (tweet_contains_attachment and tweet_contains_text) or tweet_contains_attachment:  # Image + text / image
-            self.last_tweet_doge_oriented_probability = Probability.MAYBE_PROBABLE
+            self.last_tweet_doge_oriented_probability = ProbabilityEnum.MAYBE_PROBABLE
         else:  # Text not related with doge
-            self.last_tweet_doge_oriented_probability = Probability.NOT_PROBABLE
+            self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
 
     def cleanup(self) -> None:
         """Clean strategy execution"""
