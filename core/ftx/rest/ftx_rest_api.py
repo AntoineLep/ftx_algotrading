@@ -3,7 +3,7 @@ import hmac
 import urllib.parse
 from typing import Optional, Dict, Any
 from requests import Request, Session, Response
-import config.ftx_config as ftx_config
+import config.private.ftx_config as ftx_config
 
 from exceptions.ftx_rest_api_exception import FtxRestApiException
 

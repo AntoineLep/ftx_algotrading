@@ -6,7 +6,7 @@ from collections import defaultdict, deque
 from itertools import zip_longest
 from typing import DefaultDict, Deque, List, Dict, Tuple, Optional
 from gevent.event import Event
-import config.ftx_config as ftx_config
+import config.private.ftx_config as ftx_config
 
 from core.ftx.ws.websocket_manager import WebsocketManager
 

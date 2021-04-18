@@ -12,6 +12,7 @@ from core.sotck.crypto_pair_manager import CryptoPairManager
 
 class TwitterElonMuskDogeTracker(Strategy):
     """The Elon Musk tweets will make us rich !!"""
+    doge_manager: CryptoPairManager
 
     def __init__(self):
         """The Twitter Elon Musk Doge Tracker constructor"""
@@ -21,8 +22,8 @@ class TwitterElonMuskDogeTracker(Strategy):
         self.last_tweet = {"id": None, "text": ""}
         self.last_tweet_doge_oriented_probability = Probability.NOT_PROBABLE
         self.first_loop = True
-        self.doge_manager = None
         self.lock = threading.Lock()
+        self.doge_manager = None
 
     def startup(self) -> None:
         """Strategy initialisation"""
@@ -95,3 +96,5 @@ class TwitterElonMuskDogeTracker(Strategy):
     def cleanup(self) -> None:
         """Clean strategy execution"""
         logging.info("TwitterElonMuskDogeTracker cleanup")
+        self.doge_manager.stop_all_time_frame_acq()
+

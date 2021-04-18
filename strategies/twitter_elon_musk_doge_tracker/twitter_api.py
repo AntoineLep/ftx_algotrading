@@ -1,6 +1,6 @@
 import requests
 
-import config.twitter_config as twitter_config
+import config.private.twitter_config as twitter_config
 
 
 class TwitterApi(object):
