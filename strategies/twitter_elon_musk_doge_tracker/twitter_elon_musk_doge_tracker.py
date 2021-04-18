@@ -1,13 +1,15 @@
-import logging
-import time
 import json
+import logging
 import threading
+import time
 
-from core.strategy.strategy import Strategy
-from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 from core.ftx.rest.ftx_rest_api import FtxRestApi
-from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum
 from core.sotck.crypto_pair_manager import CryptoPairManager
+from core.strategy.strategy import Strategy
+from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum
+from strategies.twitter_elon_musk_doge_tracker.order_decision_maker import OrderDecisionMaker
+from strategies.twitter_elon_musk_doge_tracker.position_driver import PositionDriver
+from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
 
 class TwitterElonMuskDogeTracker(Strategy):
@@ -17,21 +19,23 @@ class TwitterElonMuskDogeTracker(Strategy):
     def __init__(self):
         """The Twitter Elon Musk Doge Tracker constructor"""
         super(TwitterElonMuskDogeTracker, self).__init__()
+
+        # Init API
         self.twitter_api = TwitterApi()
         self.ftx_rest_api = FtxRestApi()
+
+        # Init local values
         self.last_tweet = {"id": None, "text": ""}
         self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
         self.first_loop = True
         self.lock = threading.Lock()
-        self.doge_manager = None
 
-    def startup(self) -> None:
-        """Strategy initialisation"""
-
-        logging.info("TwitterElonMuskDogeTracker startup")
+        # Init stock acquisition / order decision maker / position driver
         self.doge_manager = CryptoPairManager("DOGE-PERP", self.ftx_rest_api, self.lock)
         self.doge_manager.add_time_frame(15)
         self.doge_manager.start_all_time_frame_acq()
+        self.order_decision_maker = OrderDecisionMaker(self.doge_manager.get_time_frame(15).stock_data_manager)
+        self.position_driver = PositionDriver(self.ftx_rest_api)
 
     def run_strategy(self) -> None:
         """The strategy core"""
@@ -97,4 +101,3 @@ class TwitterElonMuskDogeTracker(Strategy):
         """Clean strategy execution"""
         logging.info("TwitterElonMuskDogeTracker cleanup")
         self.doge_manager.stop_all_time_frame_acq()
-

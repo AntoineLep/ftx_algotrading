@@ -20,17 +20,12 @@ class Strategy(object):
     def run(self) -> None:
         """Run the strategy"""
         try:
-            self.startup()
             self.run_strategy()
         except Exception:
             self.cleanup()
             raise
 
         self.cleanup()
-
-    def startup(self) -> None:
-        """Method called at the beginning of the strategy execution"""
-        raise NotImplementedError("startup method must be override")
 
     def run_strategy(self) -> None:
         """Method in which is performed the strategy logic"""
