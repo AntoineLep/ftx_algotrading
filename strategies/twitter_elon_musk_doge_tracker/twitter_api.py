@@ -1,6 +1,6 @@
 import requests
 
-import config.private.twitter_config as twitter_config
+import strategies.twitter_elon_musk_doge_tracker.config.private.twitter_config as twitter_config
 
 
 class TwitterApi(object):

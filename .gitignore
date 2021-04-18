@@ -1,6 +1,10 @@
 # project specific
-config/private/
+**/private/
 logs/
+
+# Don't ignore these files
+!config/private/ftx_config_template.py
+!strategies/twitter_elon_musk_doge_tracker/config/private/twitter_config_template.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
