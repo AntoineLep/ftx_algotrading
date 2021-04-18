@@ -1,28 +1,22 @@
-from core.models.identified_point import IdentifiedPoint
 from core.enums.color_enum import ColorEnum
+from core.models.identified_point import IdentifiedPoint
 
 
 class StockDataPoint(IdentifiedPoint):
     """Stock data point"""
 
-    def __init__(self, identifier, time, open_price, high_price, low_price, close_price, volume) -> None:
+    def __init__(self, identifier: int, time: int, open_price: float, high_price: float, low_price: float,
+                 close_price: float, volume: float) -> None:
         """
         Stock data point constructor
 
         :param identifier: Unique identifier of data point (in timestamp)
-        :type identifier: int
         :param time: Time of the data point
-        :type time: int
         :param open_price: Open price of the data point
-        :type open_price: float
         :param high_price: Highest price of the data point
-        :type high_price: float
         :param low_price: Lowest price of the data point
-        :type low_price: float
         :param close_price: Close price of the data point
-        :type close_price: float
         :param volume: Volume from of the data point
-        :type volume: float
         """
         super(StockDataPoint, self).__init__(identifier)
         self.time = time
@@ -74,9 +68,7 @@ class StockDataPoint(IdentifiedPoint):
         Tells if the stock data point is swallowing the previous stock data point
 
         :param previous: The previous stock data point
-        :type previous: StockDataPoint
         :return: True if the stock data point is swallowing the previous stock data point, False otherwise
-        :rtype: bool
         """
         prev_highest_of_open_close = previous.open_price if previous.open_price > previous.close_price \
             else previous.close_price
@@ -92,9 +84,7 @@ class StockDataPoint(IdentifiedPoint):
         Tells if the stock data point is an harami or not
 
         :param previous: The previous stock data point
-        :type previous: StockDataPoint
         :return: True if the stock data point is an harami, False otherwise
-        :rtype: bool
         """
         return previous.is_a_swallowing(self)
 

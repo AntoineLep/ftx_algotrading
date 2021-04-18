@@ -12,4 +12,8 @@ class PositionDriver(object):
         :type ftx_rest_api: core.ftx.rest.ftx_rest_api.FtxRestApi
         """
         self.ftx_rest_api = ftx_rest_api
+        self.drive_available = False
         logging.debug(f"New position driver created!")
+
+    def open_position(self):
+        pass

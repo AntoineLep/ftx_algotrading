@@ -1,5 +1,7 @@
 import logging
+import threading
 
+from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.sotck.time_frame_manager import TimeFrameManager
 from exceptions.ftx_algotrading_exception import FtxAlgotradingException
 
@@ -9,16 +11,13 @@ SUPPORTED_TIME_FRAME_LENGTH = [15, 60, 300, 900, 3600, 14400, 86400]
 class CryptoPairManager(object):
     """Crypto pair manager"""
 
-    def __init__(self, market, ftx_rest_api, lock):
+    def __init__(self, market: str, ftx_rest_api: FtxRestApi, lock: threading.Lock):
         """
         Crypto pair manager constructor
 
         :param market: Name of the currency to trade with
-        :type market: str
         :param ftx_rest_api: Instance of FtxRestApi
-        :type ftx_rest_api: core.ftx.rest.ftx_rest_api.FtxRestApi
         :param lock: The threading lock
-        :type lock: threading.Lock
         """
         self.market = market
         self._time_frames = {}
@@ -26,12 +25,11 @@ class CryptoPairManager(object):
         self._lock = lock
         logging.info(f"New crypto pair manager created! Market: {self.market}")
 
-    def add_time_frame(self, time_frame_length) -> None:
+    def add_time_frame(self, time_frame_length: int) -> None:
         """
         Add a new time frame
 
         :param time_frame_length: The length of the time frame in seconds (15, 60, 300, 900, 3600, 14400, 86400)
-        :type time_frame_length: int
         """
         if time_frame_length not in SUPPORTED_TIME_FRAME_LENGTH:
             raise FtxAlgotradingException(
@@ -45,12 +43,11 @@ class CryptoPairManager(object):
         self._time_frames[time_frame_length] = TimeFrameManager(time_frame_length, self.market, self._ftx_rest_api,
                                                                 self._lock)
 
-    def start_time_frame_acq(self, time_frame_length) -> None:
+    def start_time_frame_acq(self, time_frame_length: int) -> None:
         """
         Starts the data acquisition for a given time frame
 
         :param time_frame_length: The given time frame
-        :type time_frame_length: int
         """
         if time_frame_length not in self._time_frames:
             raise FtxAlgotradingException(
@@ -63,12 +60,11 @@ class CryptoPairManager(object):
         for key in self._time_frames.keys():
             self.start_time_frame_acq(key)
 
-    def stop_time_frame_acq(self, time_frame_length) -> None:
+    def stop_time_frame_acq(self, time_frame_length: int) -> None:
         """
         Stops the data acquisition for a given time frame
 
         :param time_frame_length: The given time frame
-        :type time_frame_length: int
         """
         if time_frame_length not in self._time_frames:
             raise FtxAlgotradingException(
@@ -81,13 +77,12 @@ class CryptoPairManager(object):
         for key in self._time_frames.keys():
             self.stop_time_frame_acq(key)
 
-    def get_time_frame(self, time_frame_length) -> TimeFrameManager:
+    def get_time_frame(self, time_frame_length: int) -> TimeFrameManager:
         """
-        Return the given time frame instance
+        Return the given time frame instance|
+
         :param time_frame_length: The given time frame
-        :type time_frame_length: int
         :return: The given time frame instance
-        :rtype: TimeFrameManager
         """
         if time_frame_length not in self._time_frames:
             raise FtxAlgotradingException(

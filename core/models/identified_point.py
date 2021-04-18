@@ -1,12 +1,11 @@
 class IdentifiedPoint(object):
     """Identified point"""
 
-    def __init__(self, identifier):
+    def __init__(self, identifier: int):
         """
         Identified point constructor
 
         :param identifier: Identifier of point
-        :type identifier: int
         """
         self.identifier = identifier
 

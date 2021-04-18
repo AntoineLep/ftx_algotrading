@@ -57,7 +57,7 @@ class WebsocketManager:
                     raise Exception(f'Error running websocket callback: {e}')
         return wrapped_f
 
-    def _run_websocket(self, ws):
+    def _run_websocket(self, ws: WebSocketApp):
         try:
             ws.run_forever()
         except Exception as e:
@@ -65,7 +65,7 @@ class WebsocketManager:
         finally:
             self._reconnect(ws)
 
-    def _reconnect(self, ws):
+    def _reconnect(self, ws: WebSocketApp):
         assert ws is not None, '_reconnect should only be called with an existing ws'
         if ws is self.ws:
             self.ws = None
@@ -81,10 +81,10 @@ class WebsocketManager:
                 if self.ws:
                     return
 
-    def _on_close(self, ws):
+    def _on_close(self, ws: WebSocketApp):
         self._reconnect(ws)
 
-    def _on_error(self, ws, error):
+    def _on_error(self, ws: WebSocketApp, error):
         self._reconnect(ws)
 
     def reconnect(self) -> None:

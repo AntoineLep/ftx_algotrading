@@ -25,12 +25,11 @@ class StockDataManager(object):
         if data_list is not None:
             self.update_data(data_list)
 
-    def update_data(self, data_list) -> None:
+    def update_data(self, data_list: list) -> None:
         """
         Update the data line and compute indicators
 
         :param data_list: The raw data list
-        :type data_list: list
         """
         self._update_data_line(data_list)
         self.stock_data_list = self._get_data_line()
@@ -50,7 +49,7 @@ class StockDataManager(object):
 
         self._data_line_cursor = self.stock_data_list[-1].identifier  # Update the cursor position
 
-    def _update_data_line(self, data_list) -> None:
+    def _update_data_line(self, data_list: list) -> None:
         """
         Update the data line
 

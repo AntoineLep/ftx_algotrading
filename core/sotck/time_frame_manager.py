@@ -6,6 +6,7 @@ import time
 from core.sotck.stock_data_manager import MAX_ITEM_IN_DATA_SET
 from core.sotck.stock_data_manager import StockDataManager
 from exceptions.ftx_rest_api_exception import FtxRestApiException
+from core.ftx.rest.ftx_rest_api import FtxRestApi
 from tools.utils import format_raw_data
 
 SUPPORTED_TIME_FRAME_LENGTH = [15, 60, 300, 900, 3600, 14400, 86400]
@@ -15,18 +16,14 @@ MAX_RETRY_DELAY = 120
 class TimeFrameManager(object):
     """Time frame manager"""
 
-    def __init__(self, time_frame_length, market, ftx_rest_api, lock):
+    def __init__(self, time_frame_length: int, market: str, ftx_rest_api: FtxRestApi, lock: threading.Lock):
         """
         Time frame manager constructor
 
         :param time_frame_length: The length of the time frame in seconds
-        :type time_frame_length: int
         :param market: Name of the market (ex: BTC-PERP)
-        :type market: str
         :param ftx_rest_api: Instance of FtxRestApi
-        :type ftx_rest_api: core.ftx.rest.ftx_rest_api.FtxRestApi
         :param lock: The threading lock
-        :type lock: threading.Lock
         """
         self.stock_data_manager = StockDataManager()
         self.market = market
@@ -37,9 +34,6 @@ class TimeFrameManager(object):
         self._last_retrieved_data_timestamp = math.floor(time.time() - time_frame_length * MAX_ITEM_IN_DATA_SET)
         self._last_acq_size = 0
         self._ftx_rest_api = ftx_rest_api
-        """
-        :type: core.ftx.rest.ftx_rest_api.FtxRestApi
-        """
 
         logging.info(
             f"Market: {self.market}, time frame: {self._time_frame_length} sec. New time frame manager created!")

@@ -11,10 +11,6 @@ class BestStratEver(Strategy):
         """The best strategy ever constructor"""
         super(BestStratEver, self).__init__()
 
-    def startup(self) -> None:
-        """Strategy initialisation"""
-        logging.info("BestStratEver startup")
-
     def run_strategy(self) -> None:
         """The strategy core"""
         logging.info("BestStratEver run_strategy")
