@@ -1,10 +1,11 @@
 import pandas as pd
 import stockstats
+from typing import Set, List, Optional
 
 from core.models.stock_data_point import StockDataPoint
 
-MAX_ITEM_IN_IND_LIST = 200
-MAX_ITEM_IN_DATA_SET = 300
+MAX_ITEM_IN_IND_LIST: int = 200
+MAX_ITEM_IN_DATA_SET: int = 300
 
 
 class StockDataManager(object):
@@ -17,10 +18,10 @@ class StockDataManager(object):
         :param data_list: Data point list
         :type data_list: list
         """
-        self._data_line = set()
-        self._data_line_cursor = -1  # Last data identifier performed
-        self.stock_data_list = []  # Last raw stock values
-        self.stock_indicators = None
+        self._data_line: Set[StockDataPoint] = set()
+        self._data_line_cursor: int = -1  # Last data identifier performed
+        self.stock_data_list: List[StockDataPoint] = []  # Last raw stock values
+        self.stock_indicators: Optional[stockstats.StockDataFrame] = None
 
         if data_list is not None:
             self.update_data(data_list)
@@ -79,7 +80,7 @@ class StockDataManager(object):
 
         self.stock_indicators = stockstats.StockDataFrame.retype(pd.DataFrame(data_line_dict_list))
 
-    def _get_data_line(self) -> [StockDataPoint]:
+    def _get_data_line(self) -> List[StockDataPoint]:
         """
         Return the data line sorted by identifier asc
 

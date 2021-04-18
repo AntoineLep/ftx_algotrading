@@ -1,6 +1,7 @@
 import logging
-import os
 import math
+import os
+from typing import Optional
 
 from exceptions.ftx_algotrading_exception import FtxAlgotradingException
 
@@ -28,16 +29,13 @@ def check_fields_in_dict(dictionary, fields, dictionary_name) -> bool:
     return True
 
 
-def format_raw_data(raw_data, time_step):
+def format_raw_data(raw_data: dict, time_step: int) -> Optional[dict]:
     """
     Format raw data
 
     :param raw_data: The raw data
-    :type raw_data: dict
     :param time_step: The time between each record
-    :type time_step: int
     :return: The formatted data list
-    :rtype: list
     """
     if all(required_field in raw_data for required_field in ["time", "open", "high", "low", "close", "volume"]):
         return {

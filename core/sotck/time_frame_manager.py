@@ -25,15 +25,15 @@ class TimeFrameManager(object):
         :param ftx_rest_api: Instance of FtxRestApi
         :param lock: The threading lock
         """
-        self.stock_data_manager = StockDataManager()
-        self.market = market
-        self._time_frame_length = time_frame_length
-        self._t_run = True
-        self._t = threading.Thread(target=self._worker)
-        self._lock = lock
-        self._last_retrieved_data_timestamp = math.floor(time.time() - time_frame_length * MAX_ITEM_IN_DATA_SET)
-        self._last_acq_size = 0
-        self._ftx_rest_api = ftx_rest_api
+        self.stock_data_manager: StockDataManager = StockDataManager()
+        self.market: str = market
+        self._time_frame_length: int = time_frame_length
+        self._t_run: bool = True
+        self._t: threading.Thread = threading.Thread(target=self._worker)
+        self._lock: threading.Lock = lock
+        self._last_retrieved_data_timestamp: int = math.floor(time.time() - time_frame_length * MAX_ITEM_IN_DATA_SET)
+        self._last_acq_size: int = 0
+        self._ftx_rest_api: FtxRestApi = ftx_rest_api
 
         logging.info(
             f"Market: {self.market}, time frame: {self._time_frame_length} sec. New time frame manager created!")
