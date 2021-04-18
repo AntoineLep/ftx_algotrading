@@ -1,5 +1,5 @@
 # project specific
-**/private/
+**/private/*
 logs/
 
 # Don't ignore these files
