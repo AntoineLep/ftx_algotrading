@@ -92,6 +92,8 @@ class TwitterElonMuskDogeTracker(Strategy):
     def fetch_tweets(self):
         """Fetch tweets"""
 
+        logging.info("Fetching tweets...")
+
         # Get tweets since last stored one
         tweets = self.twitter_api.search_tweets(
             query="from:elonmusk",

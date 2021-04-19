@@ -7,6 +7,6 @@ version = "1.0"
 strategy = TwitterElonMuskDogeTracker()
 
 log = {
-    "level": "debug",
+    "level": "info",
     "path": "logs"
 }

@@ -52,8 +52,8 @@ class TimeFrameManager(object):
             self.stock_data_manager.update_data([format_raw_data(r, self._time_frame_length) for r in response])
             self._last_retrieved_data_timestamp = max([math.floor(r["time"] / 1000) for r in response])
 
-            logging.debug(f"Market: {self.market}, time frame: {self._time_frame_length} sec. Last received point")
-            logging.debug(response[-1])
+            logging.info(f"Market: {self.market}, time frame: {self._time_frame_length} sec. Last received point")
+            logging.info(response[-1])
 
     def _feed(self) -> [dict]:
         """
