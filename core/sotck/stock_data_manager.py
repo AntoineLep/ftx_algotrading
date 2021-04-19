@@ -65,9 +65,7 @@ class StockDataManager(object):
                 )
 
     def _compute_indicators(self) -> None:
-        """
-        Compute indicators
-        """
+        """Compute indicators"""
 
         data_line_dict_list = [{
             "date": data_item.time,

@@ -21,44 +21,58 @@ class TwitterElonMuskDogeTracker(Strategy):
         super(TwitterElonMuskDogeTracker, self).__init__()
 
         # Init API
-        self.twitter_api = TwitterApi()
-        self.ftx_rest_api = FtxRestApi()
+        self.twitter_api: TwitterApi = TwitterApi()
+        self.ftx_rest_api: FtxRestApi = FtxRestApi()
 
         # Init local values
-        self.last_tweet = {"id": None, "text": ""}
-        self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
-        self.first_loop = True
-        self.lock = threading.Lock()
+        self.last_tweet: dict = {"id": None, "text": ""}
+        self.new_tweet: bool = False
+        self.first_loop: bool = True
+        self.last_tweet_doge_oriented_probability: ProbabilityEnum = ProbabilityEnum.NOT_PROBABLE
+        self.lock: threading.Lock = threading.Lock()
 
         # Init stock acquisition / order decision maker / position driver
-        self.doge_manager = CryptoPairManager("DOGE-PERP", self.ftx_rest_api, self.lock)
+        self.doge_manager: CryptoPairManager = CryptoPairManager("DOGE-PERP", self.ftx_rest_api, self.lock)
         self.doge_manager.add_time_frame(15)
         self.doge_manager.start_all_time_frame_acq()
-        self.order_decision_maker = OrderDecisionMaker(self.doge_manager.get_time_frame(15).stock_data_manager)
-        self.position_driver = PositionDriver(self.ftx_rest_api)
+        self.order_decision_maker: OrderDecisionMaker = OrderDecisionMaker(
+            self.doge_manager.get_time_frame(15).stock_data_manager)
+        self.position_driver: PositionDriver = PositionDriver(self.ftx_rest_api,
+                                                              self.doge_manager.get_time_frame(15).stock_data_manager,
+                                                              self.lock)
 
     def run_strategy(self) -> None:
         """The strategy core"""
         logging.info("TwitterElonMuskDogeTracker run_strategy")
 
+        deciding_timeout = 60
+        is_deciding = False
+        sleep_time_between_loops = 5
+
+        self.position_driver.open_position()
+
         while True:
             # Init default values
             self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
-            self.fetch_tweets()
+            self.new_tweet = False
 
-            if self.last_tweet_doge_oriented_probability is not ProbabilityEnum.NOT_PROBABLE:
-                # TODO:
-                # create an order decision maker
-                # will have to take a decision within a given time, given a dict of indicators
-                # check_volumes (True / False), probability
-                #
-                # create a position driver
-                # will open a position and manage it according to a dict of config
-                # config fields will contain: pair, leverage, tp, sl, max_exposition_time (in sec)
-                pass
+            if not is_deciding:
+                self.fetch_tweets()
+
+                if self.new_tweet:
+                    is_deciding = True
+
+            if is_deciding:
+                if self.order_decision_maker.decide(self.last_tweet_doge_oriented_probability):
+                    # decision has been made to buy ! Let run the position driver
+                    self.position_driver.open_position()
+
+                deciding_timeout -= sleep_time_between_loops
+                if deciding_timeout == 0:
+                    is_deciding = False
 
             self.first_loop = False
-            time.sleep(5)  # Every good warriors needs to rest sometime
+            time.sleep(sleep_time_between_loops)  # Every good warriors needs to rest sometime
 
     def fetch_tweets(self):
         """Fetch tweets"""
@@ -71,6 +85,7 @@ class TwitterElonMuskDogeTracker(Strategy):
 
         # New tweet !
         if tweets["meta"]["result_count"] > 0:
+            self.new_tweet = True
             self.last_tweet = tweets["data"][0]  # Store it
 
             # If it's not the first loop, then process the tweet

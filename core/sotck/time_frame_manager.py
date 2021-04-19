@@ -40,6 +40,7 @@ class TimeFrameManager(object):
 
     def feed(self) -> None:
         """Feed the stock data managers with new values"""
+
         response = self._feed()
         self._last_acq_size = len(response)
 
@@ -61,7 +62,6 @@ class TimeFrameManager(object):
         :return: A list containing the raw stock data
         :rtype: list
         """
-
         retry_delay = 5
 
         while True:
@@ -88,10 +88,12 @@ class TimeFrameManager(object):
 
     def start(self) -> None:
         """Starts the time frame manager (worker)"""
+
         self._t.start()
 
     def stop(self) -> None:
         """Stops the time frame manager (worker)"""
+
         self._t_run = False
 
     def _worker(self) -> None:

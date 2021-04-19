@@ -6,17 +6,13 @@ from pathlib import Path
 from tools.utils import expand_var_and_user
 
 
-def init_logger(log_level, log_location, app_name) -> None:
+def init_logger(log_level: str, log_location: str, app_name: str) -> None:
     """
     Setup logger
 
     :param log_level: The log level to apply
-    :type log_level: str
     :param log_location: The path where to store the log files
-    :type log_location: str
     :param app_name:  The application name
-    :type app_name: str
-    :return: None
     """
     # Getting log level
     log_level = _define_log_level(log_level)
@@ -27,6 +23,7 @@ def init_logger(log_level, log_location, app_name) -> None:
 
     # Set file formatter
     formatter = logging.Formatter("%(asctime)s :: %(levelname)s :: " + app_name + " ::  %(message)s")
+
     log_filename = "%s_log.txt" % app_name
     log_location = expand_var_and_user(log_location)
 
@@ -37,25 +34,20 @@ def init_logger(log_level, log_location, app_name) -> None:
     # Redirect logs into a log file
     file_handler = RotatingFileHandler(log_file_path, backupCount=10, maxBytes=2 * 1024 * 1024)
     file_handler.setLevel(log_level)
-    file_handler.setFormatter(formatter)
     if need_roll:
         file_handler.doRollover()
     logger.addHandler(file_handler)
 
-    # Redirect logs into the user console
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(log_level)
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
+    # Set formatter for each handler
+    [handler.setFormatter(formatter) for handler in logger.handlers]
 
 
-def _define_log_level(log_level) -> str:
+def _define_log_level(log_level: str) -> int:
     """
     Define the log level
 
     :param log_level: The log level to be defined: debug, info, warning, error, critical
-    :type log_level: str
-    :return: None
+    :return: Log level
     """
     if isinstance(log_level, str):
         if log_level.upper() == "debug":
