@@ -62,6 +62,7 @@ class PositionDriver(object):
                     if self._t is None or self._t.is_alive() is False:
                         logging.info(f"Opening position: {str(order_params)}")
                         self.ftx_rest_api.post("orders", order_params)
+                        self.position_state = PositionStateEnum.OPENED
                         self._watch_market(tp_target_percentage, sl_target_percentage, max_open_duration)
                 else:
                     return
@@ -80,8 +81,10 @@ class PositionDriver(object):
         self._t.start()
 
     def _reset_driver(self):
-        self._t_run = False
+        """Reset the worker"""
 
+        self._t_run = False
+        self.position_state = PositionStateEnum.NOT_OPENED
 
     def _worker(self, tp_target_percentage: int, sl_target_percentage: int, max_open_duration: int) -> None:
         """
@@ -102,6 +105,19 @@ class PositionDriver(object):
 
             if last_data_point_identifier != self._last_data_point.identifier:
                 last_data_point_identifier = self._last_data_point.identifier
+
+                logging.info("Checking position close condition:")
+                logging.info(f"Current price is {self._last_data_point.close_price}")
+                logging.info(f"TP price is {tp_price}")
+                logging.info(f"SL price is {sl_price}")
+                logging.info(f"Order opened duration is {opened_duration}")
+
+                if self._last_data_point.close_price >= tp_price:
+                    logging.info("TP price reached  !! =D")
+                if self._last_data_point.close_price <= sl_price:
+                    logging.info("SL price reached. :'(")
+                if opened_duration > max_open_duration:
+                    logging.info("Max open duration reached ! :)")
 
                 # New data point: Check if close condition are respected:
                 # Position has reached target

@@ -14,10 +14,10 @@ from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
 DEFAULT_DECIDING_TIMEOUT = 60
 SLEEP_TIME_BETWEEN_LOOPS = 5
-LEVERAGE = 1
+LEVERAGE = 10
 TP_TARGET_PERCENTAGE = 4
 SL_TARGET_PERCENTAGE = 1
-MAX_OPEN_DURATION = 60
+MAX_OPEN_DURATION = 60 * 5
 
 
 class TwitterElonMuskDogeTracker(Strategy):
@@ -59,20 +59,21 @@ class TwitterElonMuskDogeTracker(Strategy):
 
         while True:
             # Init default values
-            self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
             self.new_tweet = False
 
             if not is_deciding and self.position_driver.position_state == PositionStateEnum.NOT_OPENED:
+                self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
                 self.fetch_tweets()
 
-                if self.new_tweet:
+                if self.new_tweet and not self.first_loop:
                     # Start deciding process
                     is_deciding = True
                     deciding_timeout = DEFAULT_DECIDING_TIMEOUT
+                    logging.info("Starting to make a decision regarding the new tweet")
 
             if is_deciding:
                 if self.order_decision_maker.decide(self.last_tweet_doge_oriented_probability):
-                    # decision has been made to buy ! Let run the position driver
+                    logging.info("Decision has been made to buy ! Let's run the position driver")
                     deciding_timeout = 0
                     self.position_driver.open_position(LEVERAGE, TP_TARGET_PERCENTAGE, SL_TARGET_PERCENTAGE,
                                                        MAX_OPEN_DURATION)
@@ -82,7 +83,9 @@ class TwitterElonMuskDogeTracker(Strategy):
             # Update values before next loop
             self.first_loop = False
             if deciding_timeout <= 0:
-                is_deciding = False
+                if is_deciding:
+                    logging.info("Decision making succeeded or timed out")
+                    is_deciding = False
 
             time.sleep(SLEEP_TIME_BETWEEN_LOOPS)  # Every good warriors needs to rest sometime
 
@@ -91,7 +94,7 @@ class TwitterElonMuskDogeTracker(Strategy):
 
         # Get tweets since last stored one
         tweets = self.twitter_api.search_tweets(
-            query="from:TuxdisTV",
+            query="from:elonmusk",
             tweet_fields="author_id,text,attachments",
             since_id=self.last_tweet["id"]
         )
