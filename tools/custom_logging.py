@@ -50,14 +50,14 @@ def _define_log_level(log_level: str) -> int:
     :return: Log level
     """
     if isinstance(log_level, str):
-        if log_level.upper() == "debug":
+        if log_level.upper() == "DEBUG":
             return logging.DEBUG
-        if log_level.upper() == "info":
+        if log_level.upper() == "INFO":
             return logging.INFO
-        if log_level.upper() == "warning":
+        if log_level.upper() == "WARNING":
             return logging.WARNING
-        if log_level.upper() == "error":
+        if log_level.upper() == "ERROR":
             return logging.ERROR
-        if log_level.upper() == "critical":
+        if log_level.upper() == "CRITICAL":
             return logging.CRITICAL
     return logging.DEBUG
