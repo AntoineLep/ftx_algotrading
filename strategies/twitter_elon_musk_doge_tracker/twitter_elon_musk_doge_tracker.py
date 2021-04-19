@@ -6,18 +6,22 @@ import time
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.sotck.crypto_pair_manager import CryptoPairManager
 from core.strategy.strategy import Strategy
+from strategies.twitter_elon_musk_doge_tracker.enums.position_state_enum import PositionStateEnum
 from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum
 from strategies.twitter_elon_musk_doge_tracker.order_decision_maker import OrderDecisionMaker
 from strategies.twitter_elon_musk_doge_tracker.position_driver import PositionDriver
 from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
+DEFAULT_DECIDING_TIMEOUT = 60
+SLEEP_TIME_BETWEEN_LOOPS = 5
+
 
 class TwitterElonMuskDogeTracker(Strategy):
     """The Elon Musk tweets will make us rich !!"""
-    doge_manager: CryptoPairManager
 
     def __init__(self):
         """The Twitter Elon Musk Doge Tracker constructor"""
+
         super(TwitterElonMuskDogeTracker, self).__init__()
 
         # Init API
@@ -43,11 +47,11 @@ class TwitterElonMuskDogeTracker(Strategy):
 
     def run_strategy(self) -> None:
         """The strategy core"""
+
         logging.info("TwitterElonMuskDogeTracker run_strategy")
 
-        deciding_timeout = 60
+        deciding_timeout = DEFAULT_DECIDING_TIMEOUT
         is_deciding = False
-        sleep_time_between_loops = 5
 
         self.position_driver.open_position()
 
@@ -56,26 +60,32 @@ class TwitterElonMuskDogeTracker(Strategy):
             self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
             self.new_tweet = False
 
-            if not is_deciding:
+            if not is_deciding and self.position_driver.position_state == PositionStateEnum.NOT_OPENED:
                 self.fetch_tweets()
 
                 if self.new_tweet:
+                    # Start deciding process
                     is_deciding = True
+                    deciding_timeout = DEFAULT_DECIDING_TIMEOUT
 
             if is_deciding:
                 if self.order_decision_maker.decide(self.last_tweet_doge_oriented_probability):
                     # decision has been made to buy ! Let run the position driver
+                    deciding_timeout = 0
                     self.position_driver.open_position()
+                else:
+                    deciding_timeout -= SLEEP_TIME_BETWEEN_LOOPS
 
-                deciding_timeout -= sleep_time_between_loops
-                if deciding_timeout == 0:
-                    is_deciding = False
-
+            # Update values before next loop
             self.first_loop = False
-            time.sleep(sleep_time_between_loops)  # Every good warriors needs to rest sometime
+            if deciding_timeout <= 0:
+                is_deciding = False
+
+            time.sleep(SLEEP_TIME_BETWEEN_LOOPS)  # Every good warriors needs to rest sometime
 
     def fetch_tweets(self):
         """Fetch tweets"""
+
         # Get tweets since last stored one
         tweets = self.twitter_api.search_tweets(
             query="from:TuxdisTV",
@@ -94,6 +104,7 @@ class TwitterElonMuskDogeTracker(Strategy):
 
     def process_last_tweet(self):
         """We've found a tweet to process"""
+
         last_tweet = self.last_tweet
         logging.info("Processing new tweet:")
         logging.info(json.dumps(last_tweet, indent=4, sort_keys=True))
@@ -114,5 +125,6 @@ class TwitterElonMuskDogeTracker(Strategy):
 
     def cleanup(self) -> None:
         """Clean strategy execution"""
+
         logging.info("TwitterElonMuskDogeTracker cleanup")
         self.doge_manager.stop_all_time_frame_acq()
