@@ -2,12 +2,12 @@ import logging
 import math
 import threading
 import time
+from typing import Optional
 
 from core.ftx.rest.ftx_rest_api import FtxRestApi
+from core.models.stock_data_point import StockDataPoint
 from core.sotck.stock_data_manager import StockDataManager
 from strategies.twitter_elon_musk_doge_tracker.enums.position_state_enum import PositionStateEnum
-
-LEVERAGE = 1
 
 
 class PositionDriver(object):
@@ -24,12 +24,21 @@ class PositionDriver(object):
         self.position_state: PositionStateEnum = PositionStateEnum.NOT_OPENED
         self.position_size: int = 0
         self._t_run: bool = True
-        self._t: threading.Thread = threading.Thread(target=self._worker)
-        self._lock = lock
+        self._t: Optional[threading.Thread] = None
+        self._lock: threading.Lock = lock
+        self._last_data_point: Optional[StockDataPoint] = None
         logging.debug(f"New position driver created!")
 
-    def open_position(self):
-        """Open a position using account wallet free usd wallet amount"""
+    def open_position(self, leverage: int, tp_target_percentage: int, sl_target_percentage: int,
+                      max_open_duration: int) -> None:
+        """
+        Open a position using account wallet free usd wallet amount
+
+        :param leverage: Leverage to use
+        :param tp_target_percentage: Take profit after the price has reached a given percentage of value
+        :param sl_target_percentage: Stop loss after the price has loosed a given percentage of value
+        :param max_open_duration: Close the order regardless of the market after a max open duration
+        """
 
         if self.position_state == PositionStateEnum.NOT_OPENED:
             with self._lock:
@@ -37,11 +46,10 @@ class PositionDriver(object):
                 wallet = [wallet for wallet in response if wallet["coin"] == 'USD' and wallet["free"] >= 10]
                 if len(wallet) == 1:
                     wallet = wallet[0]
-                    position_price = math.floor(wallet["free"]) * LEVERAGE
-                    position_price = 1  # TODO: remove this after testing
+                    position_price = math.floor(wallet["free"]) * leverage
 
-                    last_data_point = self.stock_data_manager.stock_data_list[-1]
-                    self.position_size = math.floor(position_price / last_data_point.close_price)
+                    self._last_data_point = self.stock_data_manager.stock_data_list[-1]
+                    self.position_size = 1  # math.floor(position_price / self._last_data_point.close_price)
 
                     order_params = {
                         "market": "DOGE-PERP",
@@ -50,17 +58,78 @@ class PositionDriver(object):
                         "type": "market",
                         "size": self.position_size
                     }
-                    logging.info(f"Opening position: {str(order_params)}")
-                    # self.ftx_rest_api.post("orders", order_params)
+
+                    if self._t is None or self._t.is_alive() is False:
+                        logging.info(f"Opening position: {str(order_params)}")
+                        self.ftx_rest_api.post("orders", order_params)
+                        self._watch_market(tp_target_percentage, sl_target_percentage, max_open_duration)
                 else:
                     return
 
-    def _worker(self) -> None:
-        """Threaded function that drive the opened position"""
+    def _watch_market(self, tp_target_percentage: int, sl_target_percentage: int, max_open_duration: int):
+        """
+        Start to watch the market
+
+        :param tp_target_percentage: Take profit after the price has reached a given percentage of value
+        :param sl_target_percentage: Stop loss after the price has loosed a given percentage of value
+        :param max_open_duration: Close the order regardless of the market after a max open duration"""
+
+        self._t_run = True
+        self._t = threading.Thread(target=self._worker,
+                                   args=[tp_target_percentage, sl_target_percentage, max_open_duration])
+        self._t.start()
+
+    def _reset_driver(self):
+        self._t_run = False
+
+
+    def _worker(self, tp_target_percentage: int, sl_target_percentage: int, max_open_duration: int) -> None:
+        """
+        Threaded function that drive the opened position
+
+        :param tp_target_percentage: Take profit after the price has reached a given percentage of value
+        :param sl_target_percentage: Stop loss after the price has loosed a given percentage of value
+        :param max_open_duration: Close the order regardless of the market after a max open duration
+        """
+
+        last_data_point_identifier = self._last_data_point.identifier
+        tp_price = self._last_data_point.close_price + self._last_data_point.close_price * tp_target_percentage / 100
+        sl_price = self._last_data_point.close_price - self._last_data_point.close_price * sl_target_percentage / 100
+        opened_duration = 0
 
         while self._t_run:
-            for i in range(10):
+            self._last_data_point = self.stock_data_manager.stock_data_list[-1]
+
+            if last_data_point_identifier != self._last_data_point.identifier:
+                last_data_point_identifier = self._last_data_point.identifier
+
+                # New data point: Check if close condition are respected:
+                # Position has reached target
+                # Position is losing too much value
+                # Position has reached max open duration
+                if self._last_data_point.close_price >= tp_price or self._last_data_point.close_price <= sl_price or \
+                        opened_duration > max_open_duration:
+                    order_params = {
+                        "market": "DOGE-PERP",
+                        "side": "sell",
+                        "price": None,
+                        "type": "market",
+                        "size": self.position_size,
+                        "reduceOnly": True
+                    }
+
+                    logging.info(f"Closing position: {str(order_params)}")
+
+                    with self._lock:
+                        self.ftx_rest_api.post("orders", order_params)
+
+                    # Order has been closed, we can reset the driver
+                    self._reset_driver()
+                    break
+
+            for i in range(5):
                 if self._t_run:
                     time.sleep(1)
+                    opened_duration += 1
                 else:
                     break

@@ -14,6 +14,10 @@ from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
 DEFAULT_DECIDING_TIMEOUT = 60
 SLEEP_TIME_BETWEEN_LOOPS = 5
+LEVERAGE = 1
+TP_TARGET_PERCENTAGE = 4
+SL_TARGET_PERCENTAGE = 1
+MAX_OPEN_DURATION = 60
 
 
 class TwitterElonMuskDogeTracker(Strategy):
@@ -53,8 +57,6 @@ class TwitterElonMuskDogeTracker(Strategy):
         deciding_timeout = DEFAULT_DECIDING_TIMEOUT
         is_deciding = False
 
-        self.position_driver.open_position()
-
         while True:
             # Init default values
             self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
@@ -72,7 +74,8 @@ class TwitterElonMuskDogeTracker(Strategy):
                 if self.order_decision_maker.decide(self.last_tweet_doge_oriented_probability):
                     # decision has been made to buy ! Let run the position driver
                     deciding_timeout = 0
-                    self.position_driver.open_position()
+                    self.position_driver.open_position(LEVERAGE, TP_TARGET_PERCENTAGE, SL_TARGET_PERCENTAGE,
+                                                       MAX_OPEN_DURATION)
                 else:
                     deciding_timeout -= SLEEP_TIME_BETWEEN_LOOPS
 
