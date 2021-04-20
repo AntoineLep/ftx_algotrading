@@ -1,5 +1,6 @@
 import logging
 
+from core.enums.color_enum import ColorEnum
 from core.sotck.stock_data_manager import StockDataManager
 from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum
 
@@ -38,15 +39,17 @@ class OrderDecisionMaker(object):
                 avg_volume = sum_volume / volume_check_depth
                 last_data_point = self.stock_data_manager.stock_data_list[-1]
 
-                logging.info(f"Volume ratio is {last_data_point.volume / avg_volume} out of {volume_check_factor_size}")
+                logging.info(f"Volume ratio is {last_data_point.volume / avg_volume} out of "
+                             f"{volume_check_factor_size}. Trend is "
+                             f"{'upward' if last_data_point.get_color() == ColorEnum.GREEN else 'downward'}")
 
                 volumes_factor_reached = last_data_point.volume / avg_volume > volume_check_factor_size and \
-                    last_data_point.open_price < last_data_point.close_price
+                    last_data_point.get_color() == ColorEnum.GREEN
 
                 if volumes_factor_reached:
                     logging.info(
                         f"Last volume is at least {volume_check_factor_size} times more than the average 20 data "
-                        f"points. Decision made !")
+                        f"points and the last data point is green. Decision made !")
 
                 return volumes_factor_reached
             else:

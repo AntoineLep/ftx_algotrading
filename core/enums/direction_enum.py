@@ -1,8 +1,8 @@
 from enum import Enum
 
 
-class TrendEnum(Enum):
-    """Trend enum"""
+class DirectionEnum(Enum):
+    """Direction enum"""
 
     UNDEFINED = 0
     UP = 1
