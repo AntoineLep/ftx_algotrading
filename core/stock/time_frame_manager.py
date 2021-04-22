@@ -3,8 +3,8 @@ import math
 import threading
 import time
 
-from core.sotck.stock_data_manager import MAX_ITEM_IN_DATA_SET
-from core.sotck.stock_data_manager import StockDataManager
+from core.stock.stock_data_manager import MAX_ITEM_IN_DATA_SET
+from core.stock.stock_data_manager import StockDataManager
 from exceptions.ftx_rest_api_exception import FtxRestApiException
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from tools.utils import format_raw_data

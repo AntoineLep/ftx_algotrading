@@ -4,7 +4,7 @@ import threading
 import time
 
 from core.ftx.rest.ftx_rest_api import FtxRestApi
-from core.sotck.crypto_pair_manager import CryptoPairManager
+from core.stock.crypto_pair_manager import CryptoPairManager
 from core.strategy.strategy import Strategy
 from strategies.twitter_elon_musk_doge_tracker.enums.position_state_enum import PositionStateEnum
 from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum

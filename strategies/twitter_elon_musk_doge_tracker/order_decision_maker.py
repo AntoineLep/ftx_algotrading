@@ -1,7 +1,7 @@
 import logging
 
 from core.enums.color_enum import ColorEnum
-from core.sotck.stock_data_manager import StockDataManager
+from core.stock.stock_data_manager import StockDataManager
 from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum
 
 

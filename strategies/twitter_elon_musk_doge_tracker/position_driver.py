@@ -6,7 +6,7 @@ from typing import Optional
 
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.models.stock_data_point import StockDataPoint
-from core.sotck.stock_data_manager import StockDataManager
+from core.stock.stock_data_manager import StockDataManager
 from strategies.twitter_elon_musk_doge_tracker.enums.position_state_enum import PositionStateEnum
 
 
@@ -29,7 +29,7 @@ class PositionDriver(object):
         self._last_data_point: Optional[StockDataPoint] = None
         logging.debug(f"New position driver created!")
 
-    def open_position(self, leverage: int, tp_target_percentage: int, sl_target_percentage: int,
+    def open_position(self, leverage: int, tp_target_percentage: float, sl_target_percentage: float,
                       max_open_duration: int) -> None:
         """
         Open a position using account wallet free usd wallet amount

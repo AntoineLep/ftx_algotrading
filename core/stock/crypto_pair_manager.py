@@ -2,7 +2,7 @@ import logging
 import threading
 
 from core.ftx.rest.ftx_rest_api import FtxRestApi
-from core.sotck.time_frame_manager import TimeFrameManager
+from core.stock.time_frame_manager import TimeFrameManager
 from exceptions.ftx_algotrading_exception import FtxAlgotradingException
 
 SUPPORTED_TIME_FRAME_LENGTH = [15, 60, 300, 900, 3600, 14400, 86400]
