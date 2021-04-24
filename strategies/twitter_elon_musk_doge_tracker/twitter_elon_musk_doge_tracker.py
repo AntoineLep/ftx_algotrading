@@ -12,11 +12,11 @@ from strategies.twitter_elon_musk_doge_tracker.order_decision_maker import Order
 from strategies.twitter_elon_musk_doge_tracker.position_driver import PositionDriver
 from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
-DEFAULT_DECIDING_TIMEOUT = 60
+DEFAULT_DECIDING_TIMEOUT = 75
 SLEEP_TIME_BETWEEN_LOOPS = 5
 LEVERAGE = 10
 TP_TARGET_PERCENTAGE = 5
-SL_TARGET_PERCENTAGE = 1.25
+SL_TARGET_PERCENTAGE = 0.75
 MAX_OPEN_DURATION = 60 * 5
 
 
@@ -117,15 +117,19 @@ class TwitterElonMuskDogeTracker(Strategy):
         logging.info("Processing new tweet:")
         logging.info(json.dumps(last_tweet, indent=4, sort_keys=True))
 
-        doge_related_words = ["doge", "moon", "dog", "shiba"]
+        doge_related_words = ["doge", "dog", "shiba"]
+        probable_related_words = ["moon", "mars", "hodl", "hold"]
         last_tweet["text"] = last_tweet["text"].lower()
 
         tweet_contains_attachment = "attachments" in last_tweet
         tweet_contains_text = " " in last_tweet["text"]
         tweet_contains_doge_related_words = any(word in last_tweet["text"] for word in doge_related_words)
+        tweet_contains_probable_related_words = any(word in last_tweet["text"] for word in probable_related_words)
 
         if tweet_contains_doge_related_words:  # Doge related text
             self.last_tweet_doge_oriented_probability = ProbabilityEnum.PROBABLE
+        elif tweet_contains_probable_related_words:
+            self.last_tweet_doge_oriented_probability = ProbabilityEnum.MAYBE_PROBABLE
         elif (tweet_contains_attachment and tweet_contains_text) or tweet_contains_attachment:  # Image + text / image
             self.last_tweet_doge_oriented_probability = ProbabilityEnum.MAYBE_PROBABLE
         else:  # Text not related with doge

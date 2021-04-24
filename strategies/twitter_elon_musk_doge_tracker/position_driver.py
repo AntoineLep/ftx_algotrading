@@ -49,7 +49,7 @@ class PositionDriver(object):
                     position_price = math.floor(wallet["free"]) * leverage
 
                     self._last_data_point = self.stock_data_manager.stock_data_list[-1]
-                    self.position_size = 1  # math.floor(position_price / self._last_data_point.close_price)
+                    self.position_size = math.floor(position_price / self._last_data_point.close_price)
 
                     order_params = {
                         "market": "DOGE-PERP",
@@ -67,7 +67,7 @@ class PositionDriver(object):
                 else:
                     return
 
-    def _watch_market(self, tp_target_percentage: int, sl_target_percentage: int, max_open_duration: int):
+    def _watch_market(self, tp_target_percentage: float, sl_target_percentage: float, max_open_duration: int):
         """
         Start to watch the market
 

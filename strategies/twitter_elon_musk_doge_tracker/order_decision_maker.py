@@ -4,6 +4,9 @@ from core.enums.color_enum import ColorEnum
 from core.stock.stock_data_manager import StockDataManager
 from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum
 
+MAYBE_PROBABLE_VOLUME_CHECK_FACTOR_SIZE = 4
+NOT_PROBABLE_VOLUME_CHECK_FACTOR_SIZE = 7
+
 
 class OrderDecisionMaker(object):
     """Order decision maker"""
@@ -29,7 +32,9 @@ class OrderDecisionMaker(object):
             logging.info("The decision maker is confident concerning the future of DOGE. Decision made !")
             return True
         else:
-            volume_check_factor_size = 3 if external_factor_probability == ProbabilityEnum.MAYBE_PROBABLE else 5
+            volume_check_factor_size = MAYBE_PROBABLE_VOLUME_CHECK_FACTOR_SIZE \
+                if external_factor_probability == ProbabilityEnum.MAYBE_PROBABLE \
+                else NOT_PROBABLE_VOLUME_CHECK_FACTOR_SIZE
 
             logging.info("The decision maker needs to verify with volumes.")
 
@@ -44,7 +49,7 @@ class OrderDecisionMaker(object):
                              f"{'upward' if last_data_point.get_color() == ColorEnum.GREEN else 'downward'}")
 
                 volumes_factor_reached = last_data_point.volume / avg_volume > volume_check_factor_size and \
-                    last_data_point.get_color() == ColorEnum.GREEN
+                                         last_data_point.get_color() == ColorEnum.GREEN
 
                 if volumes_factor_reached:
                     logging.info(
