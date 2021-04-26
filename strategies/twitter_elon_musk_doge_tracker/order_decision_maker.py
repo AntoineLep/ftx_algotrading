@@ -49,7 +49,7 @@ class OrderDecisionMaker(object):
                              f"{'upward' if last_data_point.get_color() == ColorEnum.GREEN else 'downward'}")
 
                 volumes_factor_reached = last_data_point.volume / avg_volume > volume_check_factor_size and \
-                                         last_data_point.get_color() == ColorEnum.GREEN
+                    last_data_point.get_color() == ColorEnum.GREEN
 
                 if volumes_factor_reached:
                     logging.info(

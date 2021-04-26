@@ -63,7 +63,14 @@ class TwitterElonMuskDogeTracker(Strategy):
 
             if not is_deciding and self.position_driver.position_state == PositionStateEnum.NOT_OPENED:
                 self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
-                self.fetch_tweets()
+                try:
+                    self.fetch_tweets()
+                except Exception as e:
+                    logging.info("An error occurred when fetching tweets")
+                    logging.info(e)
+                    logging.info("Sleeping for 60 sec")
+                    time.sleep(60)
+                    continue
 
                 if self.new_tweet and not self.first_loop:
                     # Start deciding process
