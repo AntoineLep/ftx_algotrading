@@ -74,14 +74,18 @@ class TimeFrameManager(object):
                     "start_time": self._last_retrieved_data_timestamp + 1
                 }
 
-                response = self._ftx_rest_api.get(path, params)
-                return response
+                with self._lock:
+                    return self._ftx_rest_api.get(path, params)
+
             except FtxRestApiException as ftx_rest_api_ex:
-                logging.warning(
-                    f"Http request failed, trying again in {retry_delay} sec. Details: {str(ftx_rest_api_ex)}")
+                logging.error(
+                    f"FTX API: Http request failed, trying again in {retry_delay} sec. Details: {str(ftx_rest_api_ex)}")
                 time.sleep(retry_delay)
             except KeyError as key_err:
-                logging.warning(f"Data format error, trying again in {retry_delay} sec. Details: {str(key_err)}")
+                logging.error(f"FTX API: Data format error, trying again in {retry_delay} sec. Details: {str(key_err)}")
+                time.sleep(retry_delay)
+            except Exception as e:
+                logging.error(f"FTX API: Unknown error, trying again in {retry_delay} sec. Details: {str(e)}")
                 time.sleep(retry_delay)
             finally:
                 retry_delay = retry_delay * 2 if retry_delay * 2 < MAX_RETRY_DELAY else MAX_RETRY_DELAY
@@ -100,8 +104,7 @@ class TimeFrameManager(object):
         """Threaded function that retrieve the OHLC data"""
 
         while self._t_run:
-            with self._lock:
-                self.feed()
+            self.feed()
 
             time_to_sleep = 15 if self._last_acq_size == 0 or self._last_acq_size == MAX_ITEM_IN_DATA_SET \
                 else self._time_frame_length
