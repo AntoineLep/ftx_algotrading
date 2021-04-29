@@ -14,7 +14,8 @@ from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
 DEFAULT_DECIDING_TIMEOUT = 75
 SLEEP_TIME_BETWEEN_LOOPS = 5
-LEVERAGE = 12
+BASE_LEVERAGE = 12
+YOLO_LEVERAGE = 50
 TP_TARGET_PERCENTAGE = 10
 SL_TARGET_PERCENTAGE = 0.75
 MAX_OPEN_DURATION = 60 * 10
@@ -82,7 +83,9 @@ class TwitterElonMuskDogeTracker(Strategy):
                 if self.order_decision_maker.decide(self.last_tweet_doge_oriented_probability):
                     logging.info("Decision has been made to buy ! Let's run the position driver")
                     deciding_timeout = 0
-                    self.position_driver.open_position(LEVERAGE, TP_TARGET_PERCENTAGE, SL_TARGET_PERCENTAGE,
+                    leverage = YOLO_LEVERAGE if self.last_tweet_doge_oriented_probability is ProbabilityEnum.PROBABLE \
+                        else BASE_LEVERAGE
+                    self.position_driver.open_position(leverage, TP_TARGET_PERCENTAGE, SL_TARGET_PERCENTAGE,
                                                        MAX_OPEN_DURATION)
                 else:
                     deciding_timeout -= SLEEP_TIME_BETWEEN_LOOPS
