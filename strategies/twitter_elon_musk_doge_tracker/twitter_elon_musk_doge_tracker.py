@@ -79,9 +79,11 @@ class TwitterElonMuskDogeTracker(Strategy):
                     deciding_timeout = DEFAULT_DECIDING_TIMEOUT
                     logging.info("Starting to make a decision regarding the new tweet")
 
+            decision_taken = False
             if is_deciding:
                 if self.order_decision_maker.decide(self.last_tweet_doge_oriented_probability):
                     logging.info("Decision has been made to buy ! Let's run the position driver")
+                    decision_taken = True
                     deciding_timeout = 0
                     leverage = YOLO_LEVERAGE if self.last_tweet_doge_oriented_probability is ProbabilityEnum.PROBABLE \
                         else BASE_LEVERAGE
@@ -94,7 +96,11 @@ class TwitterElonMuskDogeTracker(Strategy):
             self.first_loop = False
             if deciding_timeout <= 0:
                 if is_deciding:
-                    logging.info("Decision making succeeded or timed out")
+                    if decision_taken:
+                        logging.info("Decision making succeeded")
+                    else:
+                        logging.info("Decision making timed out")
+
                     is_deciding = False
 
             time.sleep(SLEEP_TIME_BETWEEN_LOOPS)  # Every good warriors needs to rest sometime
