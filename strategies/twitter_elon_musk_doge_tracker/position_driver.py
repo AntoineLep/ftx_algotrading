@@ -124,7 +124,7 @@ class PositionDriver(object):
                 # Position is losing too much value
                 # Position has reached max open duration
                 if self._last_data_point.close_price >= tp_price or self._last_data_point.close_price <= sl_price or \
-                        opened_duration > max_open_duration:
+                        opened_duration >= max_open_duration:
                     order_params = {
                         "market": "DOGE-PERP",
                         "side": "sell",
