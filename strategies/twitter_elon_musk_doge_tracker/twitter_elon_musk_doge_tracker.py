@@ -13,12 +13,13 @@ from strategies.twitter_elon_musk_doge_tracker.position_driver import PositionDr
 from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
 DEFAULT_DECIDING_TIMEOUT = 75
-SLEEP_TIME_BETWEEN_LOOPS = 5
 BASE_LEVERAGE = 12
 YOLO_LEVERAGE = 50
 TP_TARGET_PERCENTAGE = 10
 SL_TARGET_PERCENTAGE = 0.75
 MAX_OPEN_DURATION = 60 * 10
+
+_SLEEP_TIME_BETWEEN_LOOPS = 5
 
 
 class TwitterElonMuskDogeTracker(Strategy):
@@ -90,7 +91,7 @@ class TwitterElonMuskDogeTracker(Strategy):
                     self.position_driver.open_position(leverage, TP_TARGET_PERCENTAGE, SL_TARGET_PERCENTAGE,
                                                        MAX_OPEN_DURATION)
                 else:
-                    deciding_timeout -= SLEEP_TIME_BETWEEN_LOOPS
+                    deciding_timeout -= _SLEEP_TIME_BETWEEN_LOOPS
 
             # Update values before next loop
             self.first_loop = False
@@ -103,7 +104,7 @@ class TwitterElonMuskDogeTracker(Strategy):
 
                     is_deciding = False
 
-            time.sleep(SLEEP_TIME_BETWEEN_LOOPS)  # Every good warriors needs to rest sometime
+            time.sleep(_SLEEP_TIME_BETWEEN_LOOPS)  # Every good warriors needs to rest sometime
 
     def fetch_tweets(self):
         """Fetch tweets"""
