@@ -3,6 +3,7 @@ import math
 import os
 from typing import Optional
 
+from core.models.raw_stock_data_dict import RawStockDataDict
 from exceptions.ftx_algotrading_exception import FtxAlgotradingException
 
 
@@ -29,7 +30,7 @@ def check_fields_in_dict(dictionary, fields, dictionary_name) -> bool:
     return True
 
 
-def format_raw_data(raw_data: dict, time_step: int) -> Optional[dict]:
+def format_raw_data(raw_data: dict, time_step: int) -> Optional[RawStockDataDict]:
     """
     Format raw data
 
@@ -41,14 +42,14 @@ def format_raw_data(raw_data: dict, time_step: int) -> Optional[dict]:
         return {
             "id": int(math.floor(raw_data["time"] / 1000) / time_step),
             "time": math.floor(raw_data["time"] / 1000),
-            "open": float(raw_data["open"]),
-            "high": float(raw_data["high"]),
-            "low": float(raw_data["low"]),
-            "close": float(raw_data["close"]),
+            "open_price": float(raw_data["open"]),
+            "high_price": float(raw_data["high"]),
+            "low_price": float(raw_data["low"]),
+            "close_price": float(raw_data["close"]),
             "volume": float(raw_data["volume"]),
         }
     else:
         logging.warning(
-            "Data should be composed of 6 fields: <startTime>, <open>, <high>, <low>, <close>, <volume>")
+            "Data should be composed of 6 fields: <time>, <open>, <high>, <low>, <close>, <volume>")
 
     return None

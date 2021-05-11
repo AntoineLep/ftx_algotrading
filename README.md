@@ -10,7 +10,7 @@ Also don't forget to fill the `application_config.py` file with the main strateg
 
 ## Trading
 This project comes with two built-in strategies:
-* **best_strat_ever:** A basic strategy for testing purposes
+* **best_strategy_ever:** A basic strategy for testing purposes
 * **twitter_elon_musk_doge_tracker:** A strategy to automates DOGE-PERP position opening when Elon Musk tweets some Doge
   related content. It has some internal configuration using globals to set up position open and close conditions.
   This strategy has an internal `config/private/twitter_config.py` file  that has to be created before being able to run
@@ -23,5 +23,9 @@ You can use ftx api examples to send trading orders. See [FTX official documenta
 
 I'm not responsible for any money losses using this bot and guarantee that it will not do anything else that what you
 ask him to do in your strategy.
+
+If you're making too much money out of this trading bot and feel like you have to give me back some love,
+do not hesitate to give you feedback or to share some of your profit at my eth address: 
+`0xb27daa27010fc68A69b6361CCAECCE14aBEea4A8`
 
 Enjoy !

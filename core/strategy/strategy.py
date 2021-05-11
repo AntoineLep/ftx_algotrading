@@ -4,32 +4,28 @@ class Strategy(object):
     def __init__(self):
         """Strategy constructor"""
 
-        self.ftx_ws_client = None
-        """
-        The ftx web socket client
-        :type: core.ws.ftxwebsocketclient.FtxWebsocketClient
-        """
-
-    def set_ftx_ws_client(self, ftx_ws_client) -> None:
-        """
-        Set the ftx web socket client
-        :param ftx_ws_client: The ftx web socket client
-        """
-        self.ftx_ws_client = ftx_ws_client
-
     def run(self) -> None:
         """Run the strategy"""
         try:
-            self.run_strategy()
+            while True:
+                self.before_loop()
+                self.loop()
+                self.after_loop()
         except Exception:
             self.cleanup()
             raise
 
-        self.cleanup()
+    def before_loop(self) -> None:
+        """Method called before the loop"""
+        raise NotImplementedError("before_loop method must be override")
 
-    def run_strategy(self) -> None:
+    def loop(self) -> None:
         """Method in which is performed the strategy logic"""
-        raise NotImplementedError("run_strategy method must be override")
+        raise NotImplementedError("loop method must be override")
+
+    def after_loop(self) -> None:
+        """Method called after the loop"""
+        raise NotImplementedError("before_loop method must be override")
 
     def cleanup(self) -> None:
         """Method called at the end of the strategy execution"""

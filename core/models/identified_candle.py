@@ -1,11 +1,11 @@
-class IdentifiedPoint(object):
-    """Identified point"""
+class IdentifiedCandle(object):
+    """Identified candle"""
 
     def __init__(self, identifier: int):
         """
-        Identified point constructor
+        Identified candle constructor
 
-        :param identifier: Identifier of point
+        :param identifier: Candle identifier
         """
         self.identifier = identifier
 

@@ -1,8 +1,10 @@
-import pandas as pd
-import stockstats
 from typing import Set, List, Optional
 
-from core.models.stock_data_point import StockDataPoint
+import pandas as pd
+import stockstats
+
+from core.models.raw_stock_data_dict import RawStockDataDict
+from core.models.candle import Candle
 
 MAX_ITEM_IN_IND_LIST: int = 200
 MAX_ITEM_IN_DATA_SET: int = 300
@@ -11,22 +13,21 @@ MAX_ITEM_IN_DATA_SET: int = 300
 class StockDataManager(object):
     """Stock data manager"""
 
-    def __init__(self, data_list=None):
+    def __init__(self, data_list: List[RawStockDataDict] = None):
         """
         Stock data manager constructor
 
-        :param data_list: Data point list
-        :type data_list: list
+        :param data_list: Data candle list
         """
-        self._data_line: Set[StockDataPoint] = set()
-        self._data_line_cursor: int = -1  # Last data identifier performed
-        self.stock_data_list: List[StockDataPoint] = []  # Last raw stock values
+        self._data_line: Set[Candle] = set()
+        self._data_line_cursor: int = -1  # Last candle identifier performed
+        self.stock_data_list: List[Candle] = []  # Last candle values
         self.stock_indicators: Optional[stockstats.StockDataFrame] = None
 
         if data_list is not None:
             self.update_data(data_list)
 
-    def update_data(self, data_list: list) -> None:
+    def update_data(self, data_list: List[RawStockDataDict]) -> None:
         """
         Update the data line and compute indicators
 
@@ -37,7 +38,7 @@ class StockDataManager(object):
 
         if len(self.stock_data_list) > 0:
             if self._data_line_cursor == -1:
-                # Put the cursor at the position just before the first data point
+                # Put the cursor at the position just before the first candle
                 self._data_line_cursor = self.stock_data_list[0].identifier - 1
 
             self._compute_indicators()
@@ -50,18 +51,17 @@ class StockDataManager(object):
 
         self._data_line_cursor = self.stock_data_list[-1].identifier  # Update the cursor position
 
-    def _update_data_line(self, data_list: list) -> None:
+    def _update_data_line(self, data_list: List[RawStockDataDict]) -> None:
         """
         Update the data line
 
         :param data_list: The raw data list
-        :type data_list: list
         """
         if data_list is not None:
             for data in data_list:
                 self._data_line.add(
-                    StockDataPoint(data["id"], data["time"], data["open"], data["high"], data["low"], data["close"],
-                                   data["volume"])
+                    Candle(data["id"], data["time"], data["open_price"], data["high_price"], data["low_price"],
+                           data["close_price"], data["volume"])
                 )
 
     def _compute_indicators(self) -> None:
@@ -69,20 +69,19 @@ class StockDataManager(object):
 
         data_line_dict_list = [{
             "date": data_item.time,
-            "close": data_item.close_price,
+            "open": data_item.open_price,
             "high": data_item.high_price,
             "low": data_item.low_price,
-            "open": data_item.open_price,
+            "close": data_item.close_price,
             "volume": data_item.volume
         } for data_item in self.stock_data_list]
 
         self.stock_indicators = stockstats.StockDataFrame.retype(pd.DataFrame(data_line_dict_list))
 
-    def _get_data_line(self) -> List[StockDataPoint]:
+    def _get_data_line(self) -> List[Candle]:
         """
         Return the data line sorted by identifier asc
 
         :return: The data line sorted by identifier asc
-        :rtype: list
         """
         return sorted(self._data_line, key=lambda k: k.identifier)

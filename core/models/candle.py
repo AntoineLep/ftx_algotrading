@@ -1,24 +1,24 @@
 from core.enums.color_enum import ColorEnum
-from core.models.identified_point import IdentifiedPoint
+from core.models.identified_candle import IdentifiedCandle
 
 
-class StockDataPoint(IdentifiedPoint):
-    """Stock data point"""
+class Candle(IdentifiedCandle):
+    """Candle"""
 
     def __init__(self, identifier: int, time: int, open_price: float, high_price: float, low_price: float,
                  close_price: float, volume: float) -> None:
         """
-        Stock data point constructor
+        Candle constructor
 
-        :param identifier: Unique identifier of data point (in timestamp)
-        :param time: Time of the data point
-        :param open_price: Open price of the data point
-        :param high_price: Highest price of the data point
-        :param low_price: Lowest price of the data point
-        :param close_price: Close price of the data point
-        :param volume: Volume from of the data point
+        :param identifier: Unique identifier of data candle (in timestamp)
+        :param time: Time of the data candle
+        :param open_price: Open price of the candle
+        :param high_price: Highest price of the candle
+        :param low_price: Lowest price of the candle
+        :param close_price: Close price of the candle
+        :param volume: Volume from of the candle
         """
-        super(StockDataPoint, self).__init__(identifier)
+        super(Candle, self).__init__(identifier)
         self.time = time
         self.open_price = open_price
         self.high_price = high_price
@@ -28,18 +28,18 @@ class StockDataPoint(IdentifiedPoint):
 
     def get_color(self) -> ColorEnum:
         """
-        Determine the color of the stock data point
+        Determine the color of the candle
 
-        :return: The color of the stock data point
+        :return: The color of the candle
         :rtype: ColorEnum
         """
         return ColorEnum.GREEN if self.open_price < self.close_price else ColorEnum.RED
 
     def is_hammer_or_hanging_man(self) -> bool:
         """
-        Tells if the stock data point is a hammer or an hanging man or not
+        Tells if the candle is a hammer or an hanging man or not
 
-        :return: True if the stock data point is a hammer or an hanging man, False otherwise
+        :return: True if the candle is a hammer or an hanging man, False otherwise
         :rtype: bool
         """
         high_minus_low = (self.high_price - self.low_price)
@@ -51,9 +51,9 @@ class StockDataPoint(IdentifiedPoint):
 
     def is_reversed_hammer_or_falling_star(self) -> bool:
         """
-        Tells if the stock data point is a reversed hammer or a falling star or not
+        Tells if the candle is a reversed hammer or a falling star or not
 
-        :return: True if the stock data point is a reversed hammer or a falling star, False otherwise
+        :return: True if the candle is a reversed hammer or a falling star, False otherwise
         :rtype: bool
         """
         high_minus_low = (self.high_price - self.low_price)
@@ -65,10 +65,10 @@ class StockDataPoint(IdentifiedPoint):
 
     def is_a_swallowing(self, previous) -> bool:
         """
-        Tells if the stock data point is swallowing the previous stock data point
+        Tells if thecandle is swallowing the previous candle
 
-        :param previous: The previous stock data point
-        :return: True if the stock data point is swallowing the previous stock data point, False otherwise
+        :param previous: The previous candle
+        :return: True if the candle is swallowing the previous candle, False otherwise
         """
         prev_highest_of_open_close = previous.open_price if previous.open_price > previous.close_price \
             else previous.close_price
@@ -81,10 +81,10 @@ class StockDataPoint(IdentifiedPoint):
 
     def is_an_harami(self, previous) -> bool:
         """
-        Tells if the stock data point is an harami or not
+        Tells if the candle is an harami or not
 
-        :param previous: The previous stock data point
-        :return: True if the stock data point is an harami, False otherwise
+        :param previous: The previous candle
+        :return: True if the candle is an harami, False otherwise
         """
         return previous.is_a_swallowing(self)
 

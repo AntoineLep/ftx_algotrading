@@ -60,7 +60,6 @@ class TimeFrameManager(object):
         Feed the stock data managers with new values
 
         :return: A list containing the raw stock data
-        :rtype: list
         """
         retry_delay = 5
 

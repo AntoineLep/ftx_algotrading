@@ -79,7 +79,7 @@ class CryptoPairManager(object):
 
     def get_time_frame(self, time_frame_length: int) -> TimeFrameManager:
         """
-        Return the given time frame instance|
+        Return the given time frame instance
 
         :param time_frame_length: The given time frame
         :return: The given time frame instance

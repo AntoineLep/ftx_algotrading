@@ -16,7 +16,7 @@ DEFAULT_DECIDING_TIMEOUT = 75
 BASE_LEVERAGE = 12
 YOLO_LEVERAGE = 50
 TP_TARGET_PERCENTAGE = 10
-SL_TARGET_PERCENTAGE = 0.75
+SL_TARGET_PERCENTAGE = 0.25
 MAX_OPEN_DURATION = 60 * 10
 
 _SLEEP_TIME_BETWEEN_LOOPS = 5
@@ -28,10 +28,9 @@ class TwitterElonMuskDogeTracker(Strategy):
     def __init__(self):
         """The Twitter Elon Musk Doge Tracker constructor"""
 
+        logging.info("TwitterElonMuskDogeTracker run strategy")
         super(TwitterElonMuskDogeTracker, self).__init__()
 
-        # Init API
-        self.twitter_api: TwitterApi = TwitterApi()
         self.ftx_rest_api: FtxRestApi = FtxRestApi()
 
         # Init local values
@@ -40,6 +39,8 @@ class TwitterElonMuskDogeTracker(Strategy):
         self.first_loop: bool = True
         self.last_tweet_doge_oriented_probability: ProbabilityEnum = ProbabilityEnum.NOT_PROBABLE
         self.lock: threading.Lock = threading.Lock()
+        self.deciding_timeout = DEFAULT_DECIDING_TIMEOUT
+        self.is_deciding = False
 
         # Init stock acquisition / order decision maker / position driver
         self.doge_manager: CryptoPairManager = CryptoPairManager("DOGE-PERP", self.ftx_rest_api, self.lock)
@@ -51,60 +52,56 @@ class TwitterElonMuskDogeTracker(Strategy):
                                                               self.doge_manager.get_time_frame(15).stock_data_manager,
                                                               self.lock)
 
-    def run_strategy(self) -> None:
+    def before_loop(self) -> None:
+        # Init default values
+        self.new_tweet = False
+
+    def loop(self) -> None:
         """The strategy core"""
 
-        logging.info("TwitterElonMuskDogeTracker run_strategy")
+        if not self.is_deciding and self.position_driver.position_state == PositionStateEnum.NOT_OPENED:
+            self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
+            try:
+                self.fetch_tweets()
+            except Exception as e:
+                logging.info("An error occurred when fetching tweets")
+                logging.info(e)
+                logging.info("Sleeping for 30 sec")
+                time.sleep(30)
+                return
 
-        deciding_timeout = DEFAULT_DECIDING_TIMEOUT
-        is_deciding = False
+            if self.new_tweet and not self.first_loop:
+                # Start deciding process
+                self.is_deciding = True
+                self.deciding_timeout = DEFAULT_DECIDING_TIMEOUT
+                logging.info("Starting to make a decision regarding the new tweet")
 
-        while True:
-            # Init default values
-            self.new_tweet = False
+        decision_taken = False
+        if self.is_deciding:
+            if self.order_decision_maker.decide(self.last_tweet_doge_oriented_probability):
+                logging.info("Decision has been made to buy ! Let's run the position driver")
+                decision_taken = True
+                self.deciding_timeout = 0
+                leverage = YOLO_LEVERAGE if self.last_tweet_doge_oriented_probability is ProbabilityEnum.PROBABLE \
+                    else BASE_LEVERAGE
+                self.position_driver.open_position(leverage, TP_TARGET_PERCENTAGE, SL_TARGET_PERCENTAGE,
+                                                   MAX_OPEN_DURATION)
+            else:
+                self.deciding_timeout -= _SLEEP_TIME_BETWEEN_LOOPS
 
-            if not is_deciding and self.position_driver.position_state == PositionStateEnum.NOT_OPENED:
-                self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
-                try:
-                    self.fetch_tweets()
-                except Exception as e:
-                    logging.info("An error occurred when fetching tweets")
-                    logging.info(e)
-                    logging.info("Sleeping for 60 sec")
-                    time.sleep(60)
-                    continue
-
-                if self.new_tweet and not self.first_loop:
-                    # Start deciding process
-                    is_deciding = True
-                    deciding_timeout = DEFAULT_DECIDING_TIMEOUT
-                    logging.info("Starting to make a decision regarding the new tweet")
-
-            decision_taken = False
-            if is_deciding:
-                if self.order_decision_maker.decide(self.last_tweet_doge_oriented_probability):
-                    logging.info("Decision has been made to buy ! Let's run the position driver")
-                    decision_taken = True
-                    deciding_timeout = 0
-                    leverage = YOLO_LEVERAGE if self.last_tweet_doge_oriented_probability is ProbabilityEnum.PROBABLE \
-                        else BASE_LEVERAGE
-                    self.position_driver.open_position(leverage, TP_TARGET_PERCENTAGE, SL_TARGET_PERCENTAGE,
-                                                       MAX_OPEN_DURATION)
+        # Update values before next loop
+        if self.deciding_timeout <= 0:
+            if self.is_deciding:
+                if decision_taken:
+                    logging.info("Decision making succeeded")
                 else:
-                    deciding_timeout -= _SLEEP_TIME_BETWEEN_LOOPS
+                    logging.info("Decision making timed out")
 
-            # Update values before next loop
-            self.first_loop = False
-            if deciding_timeout <= 0:
-                if is_deciding:
-                    if decision_taken:
-                        logging.info("Decision making succeeded")
-                    else:
-                        logging.info("Decision making timed out")
+                self.is_deciding = False
 
-                    is_deciding = False
-
-            time.sleep(_SLEEP_TIME_BETWEEN_LOOPS)  # Every good warriors needs to rest sometime
+    def after_loop(self) -> None:
+        self.first_loop = False
+        time.sleep(_SLEEP_TIME_BETWEEN_LOOPS)  # Every good warriors needs to rest sometime
 
     def fetch_tweets(self):
         """Fetch tweets"""
@@ -112,7 +109,7 @@ class TwitterElonMuskDogeTracker(Strategy):
         logging.info("Fetching tweets...")
 
         # Get tweets since last stored one
-        tweets = self.twitter_api.search_tweets(
+        tweets = TwitterApi.search_tweets(
             query="from:elonmusk",
             tweet_fields="author_id,text,attachments",
             since_id=self.last_tweet["id"]
@@ -144,7 +141,10 @@ class TwitterElonMuskDogeTracker(Strategy):
         tweet_contains_probable_related_words = any(word in last_tweet["text"] for word in probable_related_words)
 
         if tweet_contains_doge_related_words:  # Doge related text
-            self.last_tweet_doge_oriented_probability = ProbabilityEnum.PROBABLE
+            if str(last_tweet["text"]).startswith("@"):
+                self.last_tweet_doge_oriented_probability = ProbabilityEnum.MAYBE_PROBABLE
+            else:
+                self.last_tweet_doge_oriented_probability = ProbabilityEnum.PROBABLE
         elif tweet_contains_probable_related_words:
             self.last_tweet_doge_oriented_probability = ProbabilityEnum.MAYBE_PROBABLE
         elif (tweet_contains_attachment and tweet_contains_text) or tweet_contains_attachment:  # Image + text / image

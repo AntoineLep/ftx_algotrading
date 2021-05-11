@@ -39,22 +39,22 @@ class OrderDecisionMaker(object):
             logging.info("The decision maker needs to verify with volumes.")
 
             if len(self.stock_data_manager.stock_data_list) > volume_check_depth:
-                # Check last volume is volume_check_factor_size times more than the average 20 data points
+                # Check last volume is volume_check_factor_size times more than the average 20 data candles
                 sum_volume = sum([d.volume for d in self.stock_data_manager.stock_data_list[-volume_check_depth:]])
                 avg_volume = sum_volume / volume_check_depth
-                last_data_point = self.stock_data_manager.stock_data_list[-1]
+                last_data_candle = self.stock_data_manager.stock_data_list[-1]
 
-                logging.info(f"Volume ratio is {last_data_point.volume / avg_volume} out of "
+                logging.info(f"Volume ratio is {last_data_candle.volume / avg_volume} out of "
                              f"{volume_check_factor_size}. Trend is "
-                             f"{'upward' if last_data_point.get_color() == ColorEnum.GREEN else 'downward'}")
+                             f"{'upward' if last_data_candle.get_color() == ColorEnum.GREEN else 'downward'}")
 
-                volumes_factor_reached = last_data_point.volume / avg_volume > volume_check_factor_size and \
-                    last_data_point.get_color() == ColorEnum.GREEN
+                volumes_factor_reached = last_data_candle.volume / avg_volume > volume_check_factor_size and \
+                    last_data_candle.get_color() == ColorEnum.GREEN
 
                 if volumes_factor_reached:
                     logging.info(
                         f"Last volume is at least {volume_check_factor_size} times more than the average 20 data "
-                        f"points and the last data point is green. Decision made !")
+                        f"points and the last data candle is green. Decision made !")
 
                 return volumes_factor_reached
             else:
