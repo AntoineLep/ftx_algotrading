@@ -26,7 +26,7 @@ class OrderDecisionMaker(object):
         :param: external_factor_probability: External factor probability
         :return: A boolean value to tells if yes or no a position has to be made
         """
-        volume_check_depth = 20
+        volume_check_depth = 50
 
         if external_factor_probability == ProbabilityEnum.PROBABLE:
             logging.info("The decision maker is confident concerning the future of DOGE. Decision made !")

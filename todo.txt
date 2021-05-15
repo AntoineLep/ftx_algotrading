@@ -1,0 +1,12 @@
+- make PositionDriver class generic -> core.strategy.position_driver
+    - setup buy config
+        - market
+        - position size
+        - limit price (None for market)
+    - setup close conditions
+        - position timeout
+        - ftx stop loss (instead of current manual one)
+        - ftx following stop loss
+        - list of take profit orders with position size and limit price
+- add a strategy_mode (?) variable to the app config (BACKTEST / LIVE_DATA_EMULATE / LIVE_DATA)
+- implement backtest and live_data_emulate mode
