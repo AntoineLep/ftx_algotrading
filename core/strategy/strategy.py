@@ -1,3 +1,6 @@
+import logging
+
+
 class Strategy(object):
     """Base class for strategies"""
 
@@ -11,7 +14,9 @@ class Strategy(object):
                 self.before_loop()
                 self.loop()
                 self.after_loop()
-        except Exception:
+        except Exception as e:
+            logging.info("An error occurred when running strategy")
+            logging.info(e)
             self.cleanup()
             raise
 

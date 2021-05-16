@@ -12,7 +12,7 @@ from strategies.twitter_elon_musk_doge_tracker.order_decision_maker import Order
 from strategies.twitter_elon_musk_doge_tracker.position_driver import PositionDriver
 from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
-DEFAULT_DECIDING_TIMEOUT = 90
+DEFAULT_DECIDING_TIMEOUT = 45
 BASE_LEVERAGE = 15
 YOLO_LEVERAGE = 30
 TP_TARGET_PERCENTAGE = 12
