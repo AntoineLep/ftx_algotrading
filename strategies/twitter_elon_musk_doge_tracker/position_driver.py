@@ -10,6 +10,9 @@ from core.stock.stock_data_manager import StockDataManager
 from strategies.twitter_elon_musk_doge_tracker.enums.position_state_enum import PositionStateEnum
 
 
+SUB_POSITION_MAX_PRICE = 2
+
+
 class PositionDriver(object):
     """Position driver"""
 
@@ -46,22 +49,37 @@ class PositionDriver(object):
                 wallet = [wallet for wallet in response if wallet["coin"] == 'USD' and wallet["free"] >= 10]
                 if len(wallet) == 1:
                     wallet = wallet[0]
-                    position_price = min(math.floor(wallet["free"]) * leverage, 1000000)
-
+                    position_price = 10  # min(math.floor(wallet["free"]) * leverage, 250000)
+                    self.position_size = 0
                     self._last_data_candle = self.stock_data_manager.stock_data_list[-1]
-                    self.position_size = math.floor(position_price / self._last_data_candle.close_price)
 
-                    order_params = {
-                        "market": "DOGE-PERP",
-                        "side": "buy",
-                        "price": None,
-                        "type": "market",
-                        "size": self.position_size
-                    }
+                    while position_price > 1:
+                        sub_position_price = position_price if position_price < SUB_POSITION_MAX_PRICE \
+                            else SUB_POSITION_MAX_PRICE
+                        sub_position_size = math.floor(sub_position_price / self._last_data_candle.close_price)
+
+                        order_params = {
+                            "market": "DOGE-PERP",
+                            "side": "buy",
+                            "price": None,
+                            "type": "market",
+                            "size": sub_position_size
+                        }
+
+                        if self._t is None or self._t.is_alive() is False:
+                            logging.info(f"Opening position: {str(order_params)}")
+                            try:
+                                response = self.ftx_rest_api.post("orders", order_params)
+                                logging.info(f"FTX API response: {str(response)}")
+                                self.position_size += sub_position_size
+                                time.sleep(0.25)
+                            except Exception as e:
+                                logging.error("An error occurred when opening position:")
+                                logging.error(e)
+
+                        position_price -= sub_position_price
 
                     if self._t is None or self._t.is_alive() is False:
-                        logging.info(f"Opening position: {str(order_params)}")
-                        self.ftx_rest_api.post("orders", order_params)
                         self.position_state = PositionStateEnum.OPENED
                         self._watch_market(tp_target_percentage, sl_target_percentage, max_open_duration)
                 else:
@@ -137,7 +155,12 @@ class PositionDriver(object):
                     logging.info(f"Closing position: {str(order_params)}")
 
                     with self._lock:
-                        self.ftx_rest_api.post("orders", order_params)
+                        try:
+                            response = self.ftx_rest_api.post("orders", order_params)
+                            logging.info(f"FTX API response: {str(response)}")
+                        except Exception as e:
+                            logging.error("An error occurred when opening position:")
+                            logging.error(e)
 
                     # Order has been closed, we can reset the driver
                     self._reset_driver()

@@ -4,8 +4,9 @@ from core.enums.color_enum import ColorEnum
 from core.stock.stock_data_manager import StockDataManager
 from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum
 
+PROBABLE_VOLUME_FACTOR_TRIGGER = 4
 MAYBE_PROBABLE_VOLUME_FACTOR_TRIGGER = 5
-NOT_PROBABLE_VOLUME_FACTOR_TRIGGER = 8
+UNKNOWN_PROBABILITY_VOLUME_FACTOR_TRIGGER = 6
 
 
 class OrderDecisionMaker(object):
@@ -28,13 +29,17 @@ class OrderDecisionMaker(object):
         """
         volume_check_depth = 50
 
-        if external_factor_probability == ProbabilityEnum.PROBABLE:
+        if external_factor_probability == ProbabilityEnum.NO_DOUBT:
             logging.info("The decision maker is confident concerning the future of DOGE. Decision made !")
             return True
+        elif external_factor_probability == ProbabilityEnum.NOT_PROBABLE:
+            return False
         else:
-            volume_check_factor_size = MAYBE_PROBABLE_VOLUME_FACTOR_TRIGGER \
+            volume_check_factor_size = PROBABLE_VOLUME_FACTOR_TRIGGER \
+                if external_factor_probability == ProbabilityEnum.PROBABLE \
+                else MAYBE_PROBABLE_VOLUME_FACTOR_TRIGGER \
                 if external_factor_probability == ProbabilityEnum.MAYBE_PROBABLE \
-                else NOT_PROBABLE_VOLUME_FACTOR_TRIGGER
+                else UNKNOWN_PROBABILITY_VOLUME_FACTOR_TRIGGER
 
             logging.info("The decision maker needs to verify with volumes.")
 

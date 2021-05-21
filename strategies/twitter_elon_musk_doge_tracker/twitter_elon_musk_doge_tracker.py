@@ -12,12 +12,11 @@ from strategies.twitter_elon_musk_doge_tracker.order_decision_maker import Order
 from strategies.twitter_elon_musk_doge_tracker.position_driver import PositionDriver
 from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
-DEFAULT_DECIDING_TIMEOUT = 45
+DEFAULT_DECIDING_TIMEOUT = 30
 BASE_LEVERAGE = 15
-YOLO_LEVERAGE = 30
 TP_TARGET_PERCENTAGE = 12
 SL_TARGET_PERCENTAGE = 0.25
-MAX_OPEN_DURATION = 60 * 10
+MAX_OPEN_DURATION = 60 * 4
 
 _SLEEP_TIME_BETWEEN_LOOPS = 5
 
@@ -64,10 +63,10 @@ class TwitterElonMuskDogeTracker(Strategy):
             try:
                 self.fetch_tweets()
             except Exception as e:
-                logging.info("An error occurred when fetching tweets")
-                logging.info(e)
-                logging.info("Sleeping for 30 sec")
-                time.sleep(30)
+                logging.error("An error occurred when fetching tweets")
+                logging.error(e)
+                logging.info("Sleeping for 15 sec")
+                time.sleep(15)
                 return
 
             if self.new_tweet and not self.first_loop:
@@ -82,9 +81,7 @@ class TwitterElonMuskDogeTracker(Strategy):
                 logging.info("Decision has been made to buy ! Let's run the position driver")
                 decision_taken = True
                 self.deciding_timeout = 0
-                leverage = YOLO_LEVERAGE if self.last_tweet_doge_oriented_probability is ProbabilityEnum.PROBABLE \
-                    else BASE_LEVERAGE
-                self.position_driver.open_position(leverage, TP_TARGET_PERCENTAGE, SL_TARGET_PERCENTAGE,
+                self.position_driver.open_position(BASE_LEVERAGE, TP_TARGET_PERCENTAGE, SL_TARGET_PERCENTAGE,
                                                    MAX_OPEN_DURATION)
             else:
                 self.deciding_timeout -= _SLEEP_TIME_BETWEEN_LOOPS
@@ -132,25 +129,27 @@ class TwitterElonMuskDogeTracker(Strategy):
         logging.info(json.dumps(last_tweet, indent=4, sort_keys=True))
 
         doge_related_words = ["doge", "dog", "shiba"]
-        probable_related_words = ["moon", "mars", "hodl", "hold"]
+        probable_related_words = ["moon", "mars", "hodl", "hold", "coin"]
         last_tweet["text"] = last_tweet["text"].lower()
 
-        tweet_contains_attachment = "attachments" in last_tweet
-        tweet_contains_text = " " in last_tweet["text"]
-        tweet_contains_doge_related_words = any(word in last_tweet["text"] for word in doge_related_words)
-        tweet_contains_probable_related_words = any(word in last_tweet["text"] for word in probable_related_words)
-
-        if tweet_contains_doge_related_words:  # Doge related text
-            if str(last_tweet["text"]).startswith("@"):
-                self.last_tweet_doge_oriented_probability = ProbabilityEnum.MAYBE_PROBABLE
-            else:
-                self.last_tweet_doge_oriented_probability = ProbabilityEnum.PROBABLE
-        elif tweet_contains_probable_related_words:
-            self.last_tweet_doge_oriented_probability = ProbabilityEnum.MAYBE_PROBABLE
-        elif (tweet_contains_attachment and tweet_contains_text) or tweet_contains_attachment:  # Image + text / image
-            self.last_tweet_doge_oriented_probability = ProbabilityEnum.MAYBE_PROBABLE
-        else:  # Text not related with doge
+        if str(last_tweet["text"]).startswith("@"):
+            logging.info("Answering someone, can have weird market reaction, better avoid this")
             self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
+        else:
+            tweet_contains_attachment = "attachments" in last_tweet
+            tweet_contains_text = " " in last_tweet["text"]
+            tweet_contains_doge_related_words = any(word in last_tweet["text"] for word in doge_related_words)
+            tweet_contains_probable_related_words = any(word in last_tweet["text"] for word in probable_related_words)
+
+            if tweet_contains_doge_related_words:  # Doge related text
+                self.last_tweet_doge_oriented_probability = ProbabilityEnum.PROBABLE
+            elif tweet_contains_probable_related_words:
+                self.last_tweet_doge_oriented_probability = ProbabilityEnum.MAYBE_PROBABLE
+            elif (tweet_contains_attachment and tweet_contains_text) or tweet_contains_attachment:
+                # Image + text / image
+                self.last_tweet_doge_oriented_probability = ProbabilityEnum.MAYBE_PROBABLE
+            else:  # Text not related with doge
+                self.last_tweet_doge_oriented_probability = ProbabilityEnum.UNKNOWN
 
     def cleanup(self) -> None:
         """Clean strategy execution"""
