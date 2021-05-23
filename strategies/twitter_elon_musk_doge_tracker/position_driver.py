@@ -10,7 +10,7 @@ from core.stock.stock_data_manager import StockDataManager
 from strategies.twitter_elon_musk_doge_tracker.enums.position_state_enum import PositionStateEnum
 
 
-SUB_POSITION_MAX_PRICE = 2
+SUB_POSITION_MAX_PRICE = 10000
 
 
 class PositionDriver(object):
