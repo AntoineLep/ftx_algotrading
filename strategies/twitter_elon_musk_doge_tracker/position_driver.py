@@ -49,7 +49,7 @@ class PositionDriver(object):
                 wallet = [wallet for wallet in response if wallet["coin"] == 'USD' and wallet["free"] >= 10]
                 if len(wallet) == 1:
                     wallet = wallet[0]
-                    position_price = 10  # min(math.floor(wallet["free"]) * leverage, 250000)
+                    position_price = min(math.floor(wallet["free"]) * leverage, 250000)
                     self.position_size = 0
                     self._last_data_candle = self.stock_data_manager.stock_data_list[-1]
 

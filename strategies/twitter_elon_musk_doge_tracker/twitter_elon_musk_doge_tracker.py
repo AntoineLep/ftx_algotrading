@@ -14,7 +14,7 @@ from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
 DEFAULT_DECIDING_TIMEOUT = 30
 BASE_LEVERAGE = 15
-TP_TARGET_PERCENTAGE = 12
+TP_TARGET_PERCENTAGE = 10
 SL_TARGET_PERCENTAGE = 0.25
 MAX_OPEN_DURATION = 60 * 4
 
