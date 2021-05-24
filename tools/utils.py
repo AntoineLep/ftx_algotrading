@@ -64,10 +64,10 @@ def format_market_raw_data(market_raw_data: dict) -> Optional[MarketDataDict]:
     :param market_raw_data: The market raw data
     :return: The formatted data list
     """
-    if all(required_field in market_raw_data for required_field in ["market", "price", "ask", "bid", "change1h",
+    if all(required_field in market_raw_data for required_field in ["name", "price", "ask", "bid", "change1h",
                                                                     "change24h"]):
         return {
-            "market": market_raw_data["market"],
+            "name": market_raw_data["name"],
             "price": float(market_raw_data["price"]),
             "ask": float(market_raw_data["ask"]),
             "bid": float(market_raw_data["bid"]),
@@ -76,7 +76,7 @@ def format_market_raw_data(market_raw_data: dict) -> Optional[MarketDataDict]:
         }
     else:
         logging.warning(
-            "Data should be composed of 6 fields: <market>, <price>, <ask>, <bid>, <change1h>, <change24h>")
+            "Data should be composed of 6 fields: <name>, <price>, <ask>, <bid>, <change1h>, <change24h>")
 
     return None
 

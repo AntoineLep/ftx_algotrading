@@ -5,10 +5,10 @@ import time
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.stock.crypto_pair_manager import CryptoPairManager
 from core.strategy.strategy import Strategy
-from strategies.twitter_elon_musk_doge_tracker.enums.position_state_enum import PositionStateEnum
+from core.trading.position_driver import PositionDriver
+from core.enums.position_state_enum import PositionStateEnum
 from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum
 from strategies.twitter_elon_musk_doge_tracker.order_decision_maker import OrderDecisionMaker
-from strategies.twitter_elon_musk_doge_tracker.position_driver import PositionDriver
 from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 
 DEFAULT_DECIDING_TIMEOUT = 30
@@ -45,8 +45,7 @@ class TwitterElonMuskDogeTracker(Strategy):
         self.doge_manager.start_all_time_frame_acq()
         self.order_decision_maker: OrderDecisionMaker = OrderDecisionMaker(
             self.doge_manager.get_time_frame(15).stock_data_manager)
-        self.position_driver: PositionDriver = PositionDriver(self.ftx_rest_api,
-                                                              self.doge_manager.get_time_frame(15).stock_data_manager)
+        self.position_driver: PositionDriver = PositionDriver(self.ftx_rest_api)
 
     def before_loop(self) -> None:
         # Init default values
@@ -78,8 +77,8 @@ class TwitterElonMuskDogeTracker(Strategy):
                 logging.info("Decision has been made to buy ! Let's run the position driver")
                 decision_taken = True
                 self.deciding_timeout = 0
-                self.position_driver.open_position(BASE_LEVERAGE, TP_TARGET_PERCENTAGE, SL_TARGET_PERCENTAGE,
-                                                   MAX_OPEN_DURATION)
+                self.position_driver.open_position("DOGE-PERP", BASE_LEVERAGE, TP_TARGET_PERCENTAGE,
+                                                   SL_TARGET_PERCENTAGE, MAX_OPEN_DURATION)
             else:
                 self.deciding_timeout -= _SLEEP_TIME_BETWEEN_LOOPS
 
@@ -130,7 +129,7 @@ class TwitterElonMuskDogeTracker(Strategy):
         last_tweet["text"] = last_tweet["text"].lower()
 
         if str(last_tweet["text"]).startswith("@"):
-            logging.info("Answering someone, can have weird market reaction, better avoid this")
+            logging.info("Answering someone, can have weird market reaction")
             self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
         else:
             tweet_contains_attachment = "attachments" in last_tweet

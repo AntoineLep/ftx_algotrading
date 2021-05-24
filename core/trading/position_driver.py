@@ -4,43 +4,46 @@ import threading
 import time
 from typing import Optional
 
+from core.enums.position_state_enum import PositionStateEnum
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.models.market_data_dict import MarketDataDict
 from core.models.wallet_dict import WalletDict
-from strategies.twitter_elon_musk_doge_tracker.enums.position_state_enum import PositionStateEnum
-from tools.utils import format_market_raw_data
-from tools.utils import format_wallet_raw_data
+from tools.utils import format_market_raw_data, format_wallet_raw_data
 
-
-_SUB_POSITION_MAX_PRICE = 10000
-_OVERALL_POSITION_MAX_PRICE = 250000
+SUB_POSITION_MAX_PRICE = 10000
+POSITION_MAX_PRICE = 250000
 _WORKER_SLEEP_TIME_BETWEEN_LOOPS = 5
 
 
 class PositionDriver(object):
     """Position driver"""
 
-    def __init__(self, ftx_rest_api: FtxRestApi, market: str):
+    def __init__(self, ftx_rest_api: FtxRestApi, sub_position_max_price: int = SUB_POSITION_MAX_PRICE,
+                 position_max_price: int = POSITION_MAX_PRICE):
         """
         Position driver constructor
 
         :param ftx_rest_api: Instance of FtxRestApi
-        :param market: The market pair to use. Ex: BTC-PERP
+        :param sub_position_max_price: Maximum price of a position before having to split it into smaller ones
+        :param position_max_price: Maximum price the position driver can drive
         """
         self.ftx_rest_api: FtxRestApi = ftx_rest_api
-        self.market: str = market
+        self.market: str = ""
         self.position_state: PositionStateEnum = PositionStateEnum.NOT_OPENED
         self.position_size: int = 0
         self._t_run: bool = True
         self._t: Optional[threading.Thread] = None
         self._last_market_data: Optional[MarketDataDict] = None
+        self._sub_position_max_price = sub_position_max_price
+        self._position_max_price = position_max_price
         logging.debug(f"New position driver created!")
 
-    def open_position(self, leverage: int, tp_target_percentage: float, sl_target_percentage: float,
+    def open_position(self, market: str, leverage: int, tp_target_percentage: float, sl_target_percentage: float,
                       max_open_duration: int) -> None:
         """
         Open a position using account wallet free usd wallet amount
 
+        :param market: The market pair to use. Ex: BTC-PERP
         :param leverage: Leverage to use
         :param tp_target_percentage: Take profit after the price has reached a given percentage of value
         :param sl_target_percentage: Stop loss after the price has loosed a given percentage of value
@@ -53,8 +56,9 @@ class PositionDriver(object):
 
             if len(wallets) == 1:
                 wallet: WalletDict = format_wallet_raw_data(wallets[0])
-                position_price = min(math.floor(wallet["free"]) * leverage, _OVERALL_POSITION_MAX_PRICE)
+                position_price = min(math.floor(wallet["free"]) * leverage, self._position_max_price)
                 self.position_size = 0
+                self.market = market
 
                 # Store market data before opening a position to compute position size, TP and SL
                 logging.info("Retrieving market price")
@@ -63,8 +67,8 @@ class PositionDriver(object):
                 self._last_market_data = format_market_raw_data(response)
 
                 while position_price > 1:
-                    sub_position_price = position_price if position_price < _SUB_POSITION_MAX_PRICE \
-                        else _SUB_POSITION_MAX_PRICE
+                    sub_position_price = position_price if position_price < self._sub_position_max_price \
+                        else self._sub_position_max_price
                     sub_position_size = math.floor(sub_position_price / self._last_market_data["ask"])
 
                     order_params = {

@@ -7,6 +7,7 @@ from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import Pro
 PROBABLE_VOLUME_FACTOR_TRIGGER = 4
 MAYBE_PROBABLE_VOLUME_FACTOR_TRIGGER = 5
 UNKNOWN_PROBABILITY_VOLUME_FACTOR_TRIGGER = 6
+NOT_PROBABLE_VOLUME_FACTOR_TRIGGER = 60
 
 
 class OrderDecisionMaker(object):
@@ -27,18 +28,19 @@ class OrderDecisionMaker(object):
         :param: external_factor_probability: External factor probability
         :return: A boolean value to tells if yes or no a position has to be made
         """
+        return False
         volume_check_depth = 50
 
         if external_factor_probability == ProbabilityEnum.NO_DOUBT:
             logging.info("The decision maker is confident concerning the future of DOGE. Decision made !")
             return True
-        elif external_factor_probability == ProbabilityEnum.NOT_PROBABLE:
-            return False
         else:
             volume_check_factor_size = PROBABLE_VOLUME_FACTOR_TRIGGER \
                 if external_factor_probability == ProbabilityEnum.PROBABLE \
                 else MAYBE_PROBABLE_VOLUME_FACTOR_TRIGGER \
                 if external_factor_probability == ProbabilityEnum.MAYBE_PROBABLE \
+                else NOT_PROBABLE_VOLUME_FACTOR_TRIGGER \
+                if external_factor_probability == ProbabilityEnum.NOT_PROBABLE \
                 else UNKNOWN_PROBABILITY_VOLUME_FACTOR_TRIGGER
 
             logging.info("The decision maker needs to verify with volumes.")

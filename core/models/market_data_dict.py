@@ -4,7 +4,7 @@ from typing import TypedDict
 class MarketDataDict(TypedDict):
     """Market data dict"""
 
-    market: str
+    name: str
     price: float
     ask: float
     bid: float
