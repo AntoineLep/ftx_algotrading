@@ -5,32 +5,35 @@ import time
 from typing import Optional
 
 from core.ftx.rest.ftx_rest_api import FtxRestApi
-from core.models.candle import Candle
-from core.stock.stock_data_manager import StockDataManager
+from core.models.market_data_dict import MarketDataDict
+from core.models.wallet_dict import WalletDict
 from strategies.twitter_elon_musk_doge_tracker.enums.position_state_enum import PositionStateEnum
+from tools.utils import format_market_raw_data
+from tools.utils import format_wallet_raw_data
 
 
-SUB_POSITION_MAX_PRICE = 10000
+_SUB_POSITION_MAX_PRICE = 10000
+_OVERALL_POSITION_MAX_PRICE = 250000
+_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 5
 
 
 class PositionDriver(object):
     """Position driver"""
 
-    def __init__(self, ftx_rest_api: FtxRestApi, stock_data_manager: StockDataManager):
+    def __init__(self, ftx_rest_api: FtxRestApi, market: str):
         """
         Position driver constructor
 
         :param ftx_rest_api: Instance of FtxRestApi
-        :param stock_data_manager: Instance of StockDataManager
+        :param market: The market pair to use. Ex: BTC-PERP
         """
         self.ftx_rest_api: FtxRestApi = ftx_rest_api
-        self.stock_data_manager: StockDataManager = stock_data_manager
+        self.market: str = market
         self.position_state: PositionStateEnum = PositionStateEnum.NOT_OPENED
         self.position_size: int = 0
         self._t_run: bool = True
         self._t: Optional[threading.Thread] = None
-        self._last_data_candle: Optional[Candle] = None
-        self._market_ask: float = 0
+        self._last_market_data: Optional[MarketDataDict] = None
         logging.debug(f"New position driver created!")
 
     def open_position(self, leverage: int, tp_target_percentage: float, sl_target_percentage: float,
@@ -46,29 +49,26 @@ class PositionDriver(object):
 
         if self.position_state == PositionStateEnum.NOT_OPENED:
             response = self.ftx_rest_api.get("wallet/balances")
-            wallet = [wallet for wallet in response if wallet["coin"] == 'USD' and wallet["free"] >= 10]
+            wallets = [wallet for wallet in response if wallet["coin"] == 'USD' and wallet["free"] >= 10]
 
-            if len(wallet) == 1:
-                wallet = wallet[0]
-                position_price = min(math.floor(wallet["free"]) * leverage, 250000)
+            if len(wallets) == 1:
+                wallet: WalletDict = format_wallet_raw_data(wallets[0])
+                position_price = min(math.floor(wallet["free"]) * leverage, _OVERALL_POSITION_MAX_PRICE)
                 self.position_size = 0
 
-                # Store last received candle
-                self._last_data_candle = self.stock_data_manager.stock_data_list[-1]
-
-                # Store market ask price before opening a position to compute position size, TP and SL
+                # Store market data before opening a position to compute position size, TP and SL
                 logging.info("Retrieving market price")
-                response = self.ftx_rest_api.get("markets/doge-perp")
+                response = self.ftx_rest_api.get(f"markets/{self.market}")
                 logging.info(f"FTX API response: {str(response)}")
-                self._market_ask = response["ask"]
+                self._last_market_data = format_market_raw_data(response)
 
                 while position_price > 1:
-                    sub_position_price = position_price if position_price < SUB_POSITION_MAX_PRICE \
-                        else SUB_POSITION_MAX_PRICE
-                    sub_position_size = math.floor(sub_position_price / self._market_ask)
+                    sub_position_price = position_price if position_price < _SUB_POSITION_MAX_PRICE \
+                        else _SUB_POSITION_MAX_PRICE
+                    sub_position_size = math.floor(sub_position_price / self._last_market_data["ask"])
 
                     order_params = {
-                        "market": "DOGE-PERP",
+                        "market": self.market,
                         "side": "buy",
                         "price": None,
                         "type": "market",
@@ -112,7 +112,6 @@ class PositionDriver(object):
 
         self._t_run = False
         self.position_state = PositionStateEnum.NOT_OPENED
-        self._market_ask = 0
 
     def _worker(self, tp_target_percentage: int, sl_target_percentage: int, max_open_duration: int) -> None:
         """
@@ -123,38 +122,49 @@ class PositionDriver(object):
         :param max_open_duration: Close the order regardless of the market after a max open duration
         """
 
-        last_data_candle_identifier = self._last_data_candle.identifier
-        tp_price = self._market_ask + self._market_ask * tp_target_percentage / 100
-        sl_price = self._market_ask - self._market_ask * sl_target_percentage / 100
+        last_market_price = self._last_market_data["price"]
+        tp_price = self._last_market_data["price"] + self._last_market_data["price"] * tp_target_percentage / 100
+        sl_price = self._last_market_data["price"] - self._last_market_data["price"] * sl_target_percentage / 100
         opened_duration = 0
 
         while self._t_run:
-            self._last_data_candle = self.stock_data_manager.stock_data_list[-1]
+            for i in range(_WORKER_SLEEP_TIME_BETWEEN_LOOPS):
+                if self._t_run:
+                    time.sleep(1)
+                    opened_duration += 1
+                else:
+                    break
 
-            if last_data_candle_identifier != self._last_data_candle.identifier:
-                last_data_candle_identifier = self._last_data_candle.identifier
+            # Update market price
+            logging.info("Retrieving market price")
+            response = self.ftx_rest_api.get(f"markets/{self.market}")
+            logging.info(f"FTX API response: {str(response)}")
+            self._last_market_data = format_market_raw_data(response)
+
+            if self._last_market_data is not None and last_market_price != self._last_market_data["price"]:
+                last_market_price = self._last_market_data["price"]
 
                 logging.info("Checking position close condition:")
-                logging.info(f"Current price is {self._last_data_candle.close_price}")
+                logging.info(f"Current price is {self._last_market_data['price']}")
                 logging.info(f"TP price is {tp_price}")
                 logging.info(f"SL price is {sl_price}")
                 logging.info(f"Order opened duration is {opened_duration}")
 
-                if self._last_data_candle.close_price >= tp_price:
+                if last_market_price >= tp_price:
                     logging.info("TP price reached  !! =D")
-                if self._last_data_candle.close_price <= sl_price:
+                if last_market_price <= sl_price:
                     logging.info("SL price reached. :'(")
                 if opened_duration > max_open_duration:
                     logging.info("Max open duration reached ! :)")
 
-                # New data candle: Check if close condition are respected:
+                # New market price: Check if close condition are respected:
                 # Position has reached target
                 # Position is losing too much value
                 # Position has reached max open duration
-                if self._last_data_candle.close_price >= tp_price or self._last_data_candle.close_price <= sl_price or \
+                if last_market_price >= tp_price or last_market_price <= sl_price or \
                         opened_duration >= max_open_duration:
                     order_params = {
-                        "market": "DOGE-PERP",
+                        "market": self.market,
                         "side": "sell",
                         "price": None,
                         "type": "market",
@@ -171,13 +181,6 @@ class PositionDriver(object):
                         logging.error("An error occurred when opening position:")
                         logging.error(e)
 
-                    # Order has been closed, we can reset the driver
+                    # Order has been closed, we can reset the driver and break the thread loop
                     self._reset_driver()
-                    break
-
-            for i in range(5):
-                if self._t_run:
-                    time.sleep(1)
-                    opened_duration += 1
-                else:
                     break

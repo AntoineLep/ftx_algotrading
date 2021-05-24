@@ -1,4 +1,7 @@
-- make PositionDriver class generic -> core.strategy.position_driver
+- PositionDriver
+    - close_or_cancel
+    - _open_position
+- Add PositionConfig
     - setup buy config
         - market
         - position size

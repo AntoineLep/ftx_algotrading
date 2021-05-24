@@ -4,7 +4,7 @@ from strategies.best_strat_ever.best_strategy_ever import BestStrategyEver
 
 name = "ftx_algotrading"
 version = "1.0"
-strategy = TwitterElonMuskDogeTracker()
+strategy = BestStrategyEver()
 
 log = {
     "level": "info",

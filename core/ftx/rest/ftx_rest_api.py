@@ -1,12 +1,14 @@
-import time
 import hmac
+import logging
+import threading
+import time
 import urllib.parse
 from typing import Optional, Dict, Any
+
 from requests import Request, Session, Response
+
 import config.private.ftx_config as ftx_config
-
 from exceptions.ftx_rest_api_exception import FtxRestApiException
-
 
 api = {
     'public': {
@@ -16,7 +18,8 @@ api = {
             'markets/{market_name}',
             'markets/{market_name}/orderbook',  # ?depth={depth}
             'markets/{market_name}/trades',  # ?limit={limit}&start_time={start_time}&end_time={end_time}
-            'markets/{market_name}/candles',  # ?resolution={resolution}&limit={limit}&start_time={start_time}&end_time={end_time}
+            'markets/{market_name}/candles',
+            # ?resolution={resolution}&limit={limit}&start_time={start_time}&end_time={end_time}
             # futures
             'futures',
             'futures/{future_name}',
@@ -24,7 +27,8 @@ api = {
             'funding_rates',
             'indexes/{index_name}/weights',
             'expired_futures',
-            'indexes/{market_name}/candles',  # ?resolution={resolution}&limit={limit}&start_time={start_time}&end_time={end_time}
+            'indexes/{market_name}/candles',
+            # ?resolution={resolution}&limit={limit}&start_time={start_time}&end_time={end_time}
             # leverage tokens
             'lt/tokens',
             'lt/{token_name}',
@@ -138,6 +142,7 @@ api = {
 
 class FtxRestApi(object):
     _ENDPOINT = ftx_config.rest_endpoint
+    _LOCK: threading.Lock = threading.Lock()
 
     def __init__(self):
         self._session = Session()
@@ -155,12 +160,13 @@ class FtxRestApi(object):
         return self._request('DELETE', path, json=params)
 
     def _request(self, method: str, path: str, **kwargs) -> Any:
-        request = Request(method, FtxRestApi._ENDPOINT + path, **kwargs)
-        if self._api_key:
-            self._sign_request(request)
-        response = self._session.send(request.prepare())
+        with FtxRestApi._LOCK:
+            request = Request(method, FtxRestApi._ENDPOINT + path, **kwargs)
+            if self._api_key:
+                self._sign_request(request)
+            response = self._session.send(request.prepare())
 
-        return FtxRestApi._process_response(response)
+            return FtxRestApi._process_response(response)
 
     def _sign_request(self, request: Request) -> None:
         ts = int(time.time() * 1000)

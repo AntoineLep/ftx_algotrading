@@ -27,7 +27,7 @@ class BestStrategyEver(Strategy):
         logging.info(self.ftx_ws_client.get_ticker('DOGE-PERP'))
         response = self.ftx_rest_api.get("wallet/balances")
         logging.info(response)
-        response = self.ftx_rest_api.get("markets/doge-perp")
+        response = self.ftx_rest_api.get("markets/DOGE-PERP")
         logging.info(response)
 
     def after_loop(self) -> None:

@@ -1,6 +1,5 @@
 import json
 import logging
-import threading
 import time
 
 from core.ftx.rest.ftx_rest_api import FtxRestApi
@@ -37,19 +36,17 @@ class TwitterElonMuskDogeTracker(Strategy):
         self.new_tweet: bool = False
         self.first_loop: bool = True
         self.last_tweet_doge_oriented_probability: ProbabilityEnum = ProbabilityEnum.NOT_PROBABLE
-        self.lock: threading.Lock = threading.Lock()
         self.deciding_timeout = DEFAULT_DECIDING_TIMEOUT
         self.is_deciding = False
 
         # Init stock acquisition / order decision maker / position driver
-        self.doge_manager: CryptoPairManager = CryptoPairManager("DOGE-PERP", self.ftx_rest_api, self.lock)
+        self.doge_manager: CryptoPairManager = CryptoPairManager("DOGE-PERP", self.ftx_rest_api)
         self.doge_manager.add_time_frame(15)
         self.doge_manager.start_all_time_frame_acq()
         self.order_decision_maker: OrderDecisionMaker = OrderDecisionMaker(
             self.doge_manager.get_time_frame(15).stock_data_manager)
         self.position_driver: PositionDriver = PositionDriver(self.ftx_rest_api,
-                                                              self.doge_manager.get_time_frame(15).stock_data_manager,
-                                                              self.lock)
+                                                              self.doge_manager.get_time_frame(15).stock_data_manager)
 
     def before_loop(self) -> None:
         # Init default values

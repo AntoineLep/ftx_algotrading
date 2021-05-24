@@ -8,7 +8,7 @@ from typing import DefaultDict, Deque, List, Dict, Tuple, Optional
 from gevent.event import Event
 import config.private.ftx_config as ftx_config
 
-from core.ftx.ws.websocket_manager import WebsocketManager
+from tools.communication.websocket_manager import WebsocketManager
 
 
 class FtxWebsocketClient(WebsocketManager):

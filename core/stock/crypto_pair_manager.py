@@ -1,5 +1,4 @@
 import logging
-import threading
 
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.stock.time_frame_manager import TimeFrameManager
@@ -11,18 +10,16 @@ SUPPORTED_TIME_FRAME_LENGTH = [15, 60, 300, 900, 3600, 14400, 86400]
 class CryptoPairManager(object):
     """Crypto pair manager"""
 
-    def __init__(self, market: str, ftx_rest_api: FtxRestApi, lock: threading.Lock):
+    def __init__(self, market: str, ftx_rest_api: FtxRestApi):
         """
         Crypto pair manager constructor
 
         :param market: Name of the currency to trade with
         :param ftx_rest_api: Instance of FtxRestApi
-        :param lock: The threading lock
         """
         self.market = market
         self._time_frames = {}
         self._ftx_rest_api = ftx_rest_api
-        self._lock = lock
         logging.info(f"New crypto pair manager created! Market: {self.market}")
 
     def add_time_frame(self, time_frame_length: int) -> None:
@@ -40,8 +37,7 @@ class CryptoPairManager(object):
             logging.warning(f"Time frame length ({time_frame_length}) is already managed for market {self.market}")
             return
 
-        self._time_frames[time_frame_length] = TimeFrameManager(time_frame_length, self.market, self._ftx_rest_api,
-                                                                self._lock)
+        self._time_frames[time_frame_length] = TimeFrameManager(time_frame_length, self.market, self._ftx_rest_api)
 
     def start_time_frame_acq(self, time_frame_length: int) -> None:
         """

@@ -7,7 +7,7 @@ from core.stock.stock_data_manager import MAX_ITEM_IN_DATA_SET
 from core.stock.stock_data_manager import StockDataManager
 from exceptions.ftx_rest_api_exception import FtxRestApiException
 from core.ftx.rest.ftx_rest_api import FtxRestApi
-from tools.utils import format_raw_data
+from tools.utils import format_ohlcv_raw_data
 
 SUPPORTED_TIME_FRAME_LENGTH = [15, 60, 300, 900, 3600, 14400, 86400]
 MAX_RETRY_DELAY = 120
@@ -16,21 +16,19 @@ MAX_RETRY_DELAY = 120
 class TimeFrameManager(object):
     """Time frame manager"""
 
-    def __init__(self, time_frame_length: int, market: str, ftx_rest_api: FtxRestApi, lock: threading.Lock):
+    def __init__(self, time_frame_length: int, market: str, ftx_rest_api: FtxRestApi):
         """
         Time frame manager constructor
 
         :param time_frame_length: The length of the time frame in seconds
         :param market: Name of the market (ex: BTC-PERP)
         :param ftx_rest_api: Instance of FtxRestApi
-        :param lock: The threading lock
         """
         self.stock_data_manager: StockDataManager = StockDataManager()
         self.market: str = market
         self._time_frame_length: int = time_frame_length
         self._t_run: bool = True
         self._t: threading.Thread = threading.Thread(target=self._worker)
-        self._lock: threading.Lock = lock
         self._last_retrieved_data_timestamp: int = math.floor(time.time() - time_frame_length * MAX_ITEM_IN_DATA_SET)
         self._last_acq_size: int = 0
         self._ftx_rest_api: FtxRestApi = ftx_rest_api
@@ -49,7 +47,7 @@ class TimeFrameManager(object):
             f"Last acquisition size: {self._last_acq_size}")
 
         if self._last_acq_size > 0:
-            self.stock_data_manager.update_data([format_raw_data(r, self._time_frame_length) for r in response])
+            self.stock_data_manager.update_data([format_ohlcv_raw_data(r, self._time_frame_length) for r in response])
             self._last_retrieved_data_timestamp = max([math.floor(r["time"] / 1000) for r in response])
 
             logging.info(f"Market: {self.market}, time frame: {self._time_frame_length} sec. Last received point")
@@ -66,15 +64,12 @@ class TimeFrameManager(object):
         while True:
             try:
                 logging.info(f"Market: {self.market}, time frame: {self._time_frame_length} sec. Retrieving OHLC data")
-                path = f"markets/{self.market}/candles"
-                params = {
+
+                return self._ftx_rest_api.get(f"markets/{self.market}/candles", {
                     "resolution": self._time_frame_length,
                     "limit": MAX_ITEM_IN_DATA_SET,
                     "start_time": self._last_retrieved_data_timestamp + 1
-                }
-
-                with self._lock:
-                    return self._ftx_rest_api.get(path, params)
+                })
 
             except FtxRestApiException as ftx_rest_api_ex:
                 logging.error(
