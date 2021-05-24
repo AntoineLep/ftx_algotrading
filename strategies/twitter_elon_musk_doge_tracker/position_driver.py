@@ -30,6 +30,7 @@ class PositionDriver(object):
         self._t: Optional[threading.Thread] = None
         self._lock: threading.Lock = lock
         self._last_data_candle: Optional[Candle] = None
+        self._market_ask: float = 0
         logging.debug(f"New position driver created!")
 
     def open_position(self, leverage: int, tp_target_percentage: float, sl_target_percentage: float,
@@ -47,16 +48,25 @@ class PositionDriver(object):
             with self._lock:
                 response = self.ftx_rest_api.get("wallet/balances")
                 wallet = [wallet for wallet in response if wallet["coin"] == 'USD' and wallet["free"] >= 10]
+
                 if len(wallet) == 1:
                     wallet = wallet[0]
                     position_price = min(math.floor(wallet["free"]) * leverage, 250000)
                     self.position_size = 0
+
+                    # Store last received candle
                     self._last_data_candle = self.stock_data_manager.stock_data_list[-1]
+
+                    # Store market ask price before opening a position to compute position size, TP and SL
+                    logging.info("Retrieving market price")
+                    response = self.ftx_rest_api.get("markets/doge-perp")
+                    logging.info(f"FTX API response: {str(response)}")
+                    self._market_ask = response["ask"]
 
                     while position_price > 1:
                         sub_position_price = position_price if position_price < SUB_POSITION_MAX_PRICE \
                             else SUB_POSITION_MAX_PRICE
-                        sub_position_size = math.floor(sub_position_price / self._last_data_candle.close_price)
+                        sub_position_size = math.floor(sub_position_price / self._market_ask)
 
                         order_params = {
                             "market": "DOGE-PERP",
@@ -103,6 +113,7 @@ class PositionDriver(object):
 
         self._t_run = False
         self.position_state = PositionStateEnum.NOT_OPENED
+        self._market_ask = 0
 
     def _worker(self, tp_target_percentage: int, sl_target_percentage: int, max_open_duration: int) -> None:
         """
@@ -114,8 +125,8 @@ class PositionDriver(object):
         """
 
         last_data_candle_identifier = self._last_data_candle.identifier
-        tp_price = self._last_data_candle.close_price + self._last_data_candle.close_price * tp_target_percentage / 100
-        sl_price = self._last_data_candle.close_price - self._last_data_candle.close_price * sl_target_percentage / 100
+        tp_price = self._market_ask + self._market_ask * tp_target_percentage / 100
+        sl_price = self._market_ask - self._market_ask * sl_target_percentage / 100
         opened_duration = 0
 
         while self._t_run:

@@ -8,5 +8,6 @@
         - ftx stop loss (instead of current manual one)
         - ftx following stop loss
         - list of take profit orders with position size and limit price
+    - add a close position method
 - add a strategy_mode (?) variable to the app config (BACKTEST / LIVE_DATA_EMULATE / LIVE_DATA)
 - implement backtest and live_data_emulate mode
