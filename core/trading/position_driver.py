@@ -101,7 +101,8 @@ class PositionDriver(object):
                 "side": "sell" if self.position_side == OrderSideEnum.BUY else "buy",
                 "price": None,
                 "type": "market",
-                "size": self.position_size
+                "size": self.position_size,
+                "reduceOnly": True
             }
 
             try:
