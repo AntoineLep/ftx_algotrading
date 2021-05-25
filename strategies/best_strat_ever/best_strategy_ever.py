@@ -25,10 +25,9 @@ class BestStrategyEver(Strategy):
     def loop(self) -> None:
         """The strategy core"""
         logging.info(self.ftx_ws_client.get_ticker('DOGE-PERP'))
-        response = self.ftx_rest_api.get("wallet/balances")
-        logging.info(response)
-        response = self.ftx_rest_api.get("markets/DOGE-PERP")
-        logging.info(response)
+        logging.info("Retrieving orders")
+        response = self.ftx_rest_api.get("orders", {"market": "DOGE-PERP"})
+        logging.info(f"FTX API response: {str(response)}")
 
     def after_loop(self) -> None:
         time.sleep(2)

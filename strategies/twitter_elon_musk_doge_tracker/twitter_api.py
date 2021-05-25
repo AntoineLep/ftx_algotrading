@@ -100,15 +100,11 @@ class TwitterApi(object):
         return response.json()
 
     @staticmethod
-    def get_stream():
+    def get_stream() -> any:
         response = requests.get(
             "https://api.twitter.com/2/tweets/search/stream", headers=TwitterApi._create_headers(), stream=True,
         )
         if response.status_code != 200:
-            raise Exception(
-                "Cannot get stream (HTTP {}): {}".format(
-                    response.status_code, response.text
-                )
-            )
+            raise Exception(f"Cannot get stream (HTTP {response.status_code}): {response.text}")
 
         return response

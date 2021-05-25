@@ -3,6 +3,7 @@ import math
 import os
 from typing import Optional
 
+from core.enums.trigger_order_type_enum import TriggerOrderTypeEnum
 from core.models.market_data_dict import MarketDataDict
 from core.models.raw_stock_data_dict import RawStockDataDict
 from core.models.wallet_dict import WalletDict
@@ -94,9 +95,9 @@ def format_wallet_raw_data(wallet_raw_data: dict) -> Optional[WalletDict]:
             "coin": wallet_raw_data["coin"],
             "total": float(wallet_raw_data["total"]),
             "free": float(wallet_raw_data["free"]),
-            "availableWithoutBorrow": float(wallet_raw_data["availableWithoutBorrow"]),
-            "usdValue": float(wallet_raw_data["usdValue"]),
-            "spotBorrow": float(wallet_raw_data["spotBorrow"])
+            "available_without_borrow": float(wallet_raw_data["availableWithoutBorrow"]),
+            "usd_value": float(wallet_raw_data["usdValue"]),
+            "spot_borrow": float(wallet_raw_data["spotBorrow"])
         }
     else:
         logging.warning(
@@ -105,3 +106,13 @@ def format_wallet_raw_data(wallet_raw_data: dict) -> Optional[WalletDict]:
 
     return None
 
+
+def get_trigger_order_type(trigger_order_type: TriggerOrderTypeEnum) -> str:
+    """
+    Get FTX trigger order type for given trigger_order_type enum value
+
+    :param trigger_order_type: trigger_order_type enum value
+    :return: FTX trigger order type for given trigger_order_type enum value
+    """
+    return "trailingStop" if trigger_order_type == TriggerOrderTypeEnum.TRAILING_STOP \
+        else "takeProfit" if trigger_order_type == TriggerOrderTypeEnum.TAKE_PROFIT else "stop"

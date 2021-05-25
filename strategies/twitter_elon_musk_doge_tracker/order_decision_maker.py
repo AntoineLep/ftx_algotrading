@@ -28,7 +28,6 @@ class OrderDecisionMaker(object):
         :param: external_factor_probability: External factor probability
         :return: A boolean value to tells if yes or no a position has to be made
         """
-        return False
         volume_check_depth = 50
 
         if external_factor_probability == ProbabilityEnum.NO_DOUBT:

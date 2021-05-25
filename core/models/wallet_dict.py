@@ -7,6 +7,6 @@ class WalletDict(TypedDict):
     coin: str
     total: float
     free: float
-    availableWithoutBorrow: float
-    usdValue: float
-    spotBorrow: float
+    available_without_borrow: float
+    usd_value: float
+    spot_borrow: float
