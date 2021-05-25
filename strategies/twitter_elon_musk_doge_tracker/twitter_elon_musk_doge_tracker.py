@@ -30,6 +30,7 @@ SL_PERCENTAGE = 0.4
 MAX_OPEN_DURATION = 60 * 4
 POSITION_MAX_PRICE = 250000
 SUB_POSITION_MAX_PRICE = 10000
+TWITTER_ACCOUNT = "elonmusk"
 
 _SLEEP_TIME_BETWEEN_LOOPS = 5
 
@@ -202,7 +203,7 @@ class TwitterElonMuskDogeTracker(Strategy):
 
         # Get tweets since last stored one
         tweets = TwitterApi.search_tweets(
-            query="from:elonmusk",
+            query=f"from:{TWITTER_ACCOUNT}",
             tweet_fields="author_id,text,attachments",
             since_id=self.last_tweet["id"]
         )

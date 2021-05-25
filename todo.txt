@@ -1,2 +1,3 @@
 - add a strategy_mode (?) variable to the app config (BACKTEST / LIVE_DATA_EMULATE / LIVE_DATA)
 - implement backtest and live_data_emulate mode
+- use GET /positions to cancel position is sl is hit before position timeout or manual cancelation
