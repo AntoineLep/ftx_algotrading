@@ -20,17 +20,34 @@ from strategies.twitter_elon_musk_doge_tracker.order_decision_maker import Order
 from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 from tools.utils import format_wallet_raw_data, format_market_raw_data
 
-DEFAULT_DECIDING_TIMEOUT = 30
-SAFE_LEVERAGE = 8
-BASE_LEVERAGE = 15
+
+DEFAULT_DECIDING_TIMEOUT = 30  # Time for taking the decision to buy DOGE according to volume check
+
+SAFE_LEVERAGE = 8  # Will be used in case of TWITTER_ACCOUNT answering to someone
+BASE_LEVERAGE = 15  # Will be used otherwise
+
+# First take profit
 TP1_TARGET_PERCENTAGE = 4
+TP1_SIZE_RATIO = 0.3
+
+# Second take profit
 TP2_TARGET_PERCENTAGE = 8
+TP2_SIZE_RATIO = 0.4
+
+# Last take profit
 TP3_TARGET_PERCENTAGE = 12
+# TP3_SIZE_RATIO Will be filled with remaining position size
+
+# Stop loss
 SL_PERCENTAGE = 0.4
+
 MAX_OPEN_DURATION = 60 * 4
-POSITION_MAX_PRICE = 250000
-SUB_POSITION_MAX_PRICE = 10000
+
+POSITION_MAX_PRICE = 250000  # Won't be able to open a position with usd price higher than this
+SUB_POSITION_MAX_PRICE = 10000  # Maximum position price before splitting position order into smaller ones
+
 TWITTER_ACCOUNT = "elonmusk"
+
 
 _SLEEP_TIME_BETWEEN_LOOPS = 5
 
@@ -153,7 +170,7 @@ class TwitterElonMuskDogeTracker(Strategy):
                     position_price -= sub_position_price
 
                 tp1: TriggerOrderConfigDict = {
-                    "size": position_size // 3,
+                    "size": position_size * TP1_SIZE_RATIO,
                     "type": TriggerOrderTypeEnum.TAKE_PROFIT,
                     "reduce_only": True,
                     "trigger_price": market_data["ask"] + market_data["ask"] * TP1_TARGET_PERCENTAGE / 100,
@@ -162,7 +179,7 @@ class TwitterElonMuskDogeTracker(Strategy):
                 }
 
                 tp2: TriggerOrderConfigDict = {
-                    "size": position_size // 3,
+                    "size": position_size * TP2_SIZE_RATIO,
                     "type": TriggerOrderTypeEnum.TAKE_PROFIT,
                     "reduce_only": True,
                     "trigger_price": market_data["ask"] + market_data["ask"] * TP2_TARGET_PERCENTAGE / 100,

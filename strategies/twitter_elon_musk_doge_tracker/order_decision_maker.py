@@ -4,9 +4,9 @@ from core.enums.color_enum import ColorEnum
 from core.stock.stock_data_manager import StockDataManager
 from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import ProbabilityEnum
 
-PROBABLE_VOLUME_FACTOR_TRIGGER = 4
-MAYBE_PROBABLE_VOLUME_FACTOR_TRIGGER = 5
-UNKNOWN_PROBABILITY_VOLUME_FACTOR_TRIGGER = 6
+PROBABLE_VOLUME_FACTOR_TRIGGER = 6
+MAYBE_PROBABLE_VOLUME_FACTOR_TRIGGER = 10
+UNKNOWN_PROBABILITY_VOLUME_FACTOR_TRIGGER = 15
 NOT_PROBABLE_VOLUME_FACTOR_TRIGGER = 60
 
 
