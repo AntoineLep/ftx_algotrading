@@ -55,6 +55,7 @@ class WebsocketManager:
                     f(ws, *args, **kwargs)
                 except Exception as e:
                     raise Exception(f'Error running websocket callback: {e}')
+
         return wrapped_f
 
     def _run_websocket(self, ws: WebSocketApp):

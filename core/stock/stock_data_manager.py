@@ -3,8 +3,8 @@ from typing import Set, List, Optional
 import pandas as pd
 import stockstats
 
-from core.models.raw_stock_data_dict import RawStockDataDict
 from core.models.candle import Candle
+from core.models.raw_stock_data_dict import RawStockDataDict
 
 MAX_ITEM_IN_IND_LIST: int = 200
 MAX_ITEM_IN_DATA_SET: int = 300

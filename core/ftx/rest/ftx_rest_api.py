@@ -1,5 +1,4 @@
 import hmac
-import logging
 import threading
 import time
 import urllib.parse

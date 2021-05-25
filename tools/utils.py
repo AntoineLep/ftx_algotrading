@@ -3,8 +3,10 @@ import math
 import os
 from typing import Optional
 
+from core.enums.side_enum import SideEnum
 from core.enums.trigger_order_type_enum import TriggerOrderTypeEnum
 from core.models.market_data_dict import MarketDataDict
+from core.models.position_data_dict import PositionDataDict
 from core.models.raw_stock_data_dict import RawStockDataDict
 from core.models.wallet_dict import WalletDict
 from exceptions.ftx_algotrading_exception import FtxAlgotradingException
@@ -103,6 +105,48 @@ def format_wallet_raw_data(wallet_raw_data: dict) -> Optional[WalletDict]:
         logging.warning(
             "Data should be composed of 6 fields: <coin>, <total>, <free>, <availableWithoutBorrow>, <usdValue>, "
             "<spotBorrow>")
+
+    return None
+
+
+def format_position_raw_data(position_raw_data: dict) -> Optional[PositionDataDict]:
+    """
+    Format position raw data
+
+    :param position_raw_data: The position raw data
+    :return: The formatted data list
+    """
+    if all(required_field in position_raw_data for required_field in ["future", "size", "side", "netSize",
+                                                                      "longOrderSize", "shortOrderSize", "cost",
+                                                                      "entryPrice", "unrealizedPnl", "realizedPnl",
+                                                                      "initialMarginRequirement",
+                                                                      "maintenanceMarginRequirement", "openSize",
+                                                                      "collateralUsed", "estimatedLiquidationPrice"
+                                                                      ]):
+        return {
+            "future": position_raw_data["future"],
+            "size": float(position_raw_data["size"]),
+            "side": SideEnum.BUY if position_raw_data["side"] == "buy" else SideEnum.SELL,
+            "net_size": float(position_raw_data["netSize"]),
+            "long_order_size": float(position_raw_data["longOrderSize"]),
+            "short_order_size": float(position_raw_data["shortOrderSize"]),
+            "cost": float(position_raw_data["cost"]),
+            "entry_price": float(position_raw_data["entryPrice"])
+            if position_raw_data["entryPrice"] is not None else None,
+            "unrealized_pnl": float(position_raw_data["unrealizedPnl"]),
+            "realized_pnl": float(position_raw_data["realizedPnl"]),
+            "initial_margin_requirement": float(position_raw_data["initialMarginRequirement"]),
+            "maintenance_margin_requirement": float(position_raw_data["maintenanceMarginRequirement"]),
+            "open_size": float(position_raw_data["openSize"]),
+            "collateral_used": float(position_raw_data["collateralUsed"]),
+            "estimated_liquidation_price": float(position_raw_data["estimatedLiquidationPrice"])
+            if position_raw_data["estimatedLiquidationPrice"] is not None else None,
+        }
+    else:
+        logging.warning(
+            "Data should be composed of 15 fields: <future>, <size>, <side>, <netSize>, <longOrderSize>, "
+            "<shortOrderSize>, <cost>, <entryPrice>, <unrealizedPnl>, <realizedPnl>, <initialMarginRequirement>, "
+            "<maintenanceMarginRequirement>, <openSize>, <collateralUsed>, <estimatedLiquidationPrice>")
 
     return None
 

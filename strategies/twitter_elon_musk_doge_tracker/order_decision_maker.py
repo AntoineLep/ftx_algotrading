@@ -9,6 +9,8 @@ MAYBE_PROBABLE_VOLUME_FACTOR_TRIGGER = 10
 UNKNOWN_PROBABILITY_VOLUME_FACTOR_TRIGGER = 15
 NOT_PROBABLE_VOLUME_FACTOR_TRIGGER = 60
 
+VOLUME_CHECK_DEPTH = 50
+
 
 class OrderDecisionMaker(object):
     """Order decision maker"""
@@ -28,7 +30,6 @@ class OrderDecisionMaker(object):
         :param: external_factor_probability: External factor probability
         :return: A boolean value to tells if yes or no a position has to be made
         """
-        volume_check_depth = 50
 
         if external_factor_probability == ProbabilityEnum.NO_DOUBT:
             logging.info("The decision maker is confident concerning the future of DOGE. Decision made !")
@@ -44,10 +45,10 @@ class OrderDecisionMaker(object):
 
             logging.info("The decision maker needs to verify with volumes.")
 
-            if len(self.stock_data_manager.stock_data_list) > volume_check_depth:
+            if len(self.stock_data_manager.stock_data_list) > VOLUME_CHECK_DEPTH:
                 # Check last volume is volume_check_factor_size times more than the average 20 data candles
-                sum_volume = sum([d.volume for d in self.stock_data_manager.stock_data_list[-volume_check_depth:]])
-                avg_volume = sum_volume / volume_check_depth
+                sum_volume = sum([d.volume for d in self.stock_data_manager.stock_data_list[-VOLUME_CHECK_DEPTH:]])
+                avg_volume = sum_volume / VOLUME_CHECK_DEPTH
                 last_data_candle = self.stock_data_manager.stock_data_list[-1]
 
                 logging.info(f"Volume ratio is {last_data_candle.volume / avg_volume} out of "

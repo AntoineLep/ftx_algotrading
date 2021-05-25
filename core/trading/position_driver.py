@@ -3,12 +3,13 @@ import threading
 import time
 from typing import Optional
 
-from core.enums.order_side_enum import OrderSideEnum
 from core.enums.order_type_enum import OrderTypeEnum
 from core.enums.position_state_enum import PositionStateEnum
+from core.enums.side_enum import SideEnum
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.models.position_config_dict import PositionConfigDict
-from tools.utils import get_trigger_order_type
+from core.models.position_data_dict import PositionDataDict
+from tools.utils import get_trigger_order_type, format_position_raw_data
 
 _WORKER_SLEEP_TIME_BETWEEN_LOOPS = 10
 
@@ -26,12 +27,12 @@ class PositionDriver(object):
         self.market: str = ""
         self.position_state: PositionStateEnum = PositionStateEnum.NOT_OPENED
         self.position_size: int = 0
-        self.position_side: Optional[OrderSideEnum] = None
+        self.position_side: Optional[SideEnum] = None
         self._t_run: bool = True
         self._t: Optional[threading.Thread] = None
         logging.debug(f"New position driver created!")
 
-    def open_position(self, market: str, side: OrderSideEnum, position_config: PositionConfigDict) -> None:
+    def open_position(self, market: str, side: SideEnum, position_config: PositionConfigDict) -> None:
         """
         Open a position using account wallet free usd wallet amount
 
@@ -50,28 +51,29 @@ class PositionDriver(object):
 
                 order_params = {
                     "market": self.market,
-                    "side": "buy" if self.position_side == OrderSideEnum.BUY else "sell",
+                    "side": "buy" if self.position_side == SideEnum.BUY else "sell",
                     "price": opening["price"],
                     "type": "market" if opening["type"] == OrderTypeEnum.MARKET else "limit",
                     "size": opening["size"]
                 }
 
-                logging.info(f"Opening position: {str(order_params)}")
                 try:
+                    logging.info(f"Opening position: {str(order_params)}")
                     response = self.ftx_rest_api.post("orders", order_params)
                     logging.info(f"FTX API response: {str(response)}")
                     self.position_size += opening["size"]
-                    time.sleep(0.25)
                 except Exception as e:
                     logging.error("An error occurred when opening position:")
                     logging.error(e)
+
+                time.sleep(0.25)
 
             # Apply trigger orders
             for trigger_order in position_config["trigger_orders"]:
 
                 trigger_order_params = {
                     "market": self.market,
-                    "side": "sell" if self.position_side == OrderSideEnum.BUY else "buy",
+                    "side": "sell" if self.position_side == SideEnum.BUY else "buy",
                     "size": trigger_order["size"],
                     "type": get_trigger_order_type(trigger_order["type"]),
                     "reduceOnly": trigger_order["reduce_only"],
@@ -80,14 +82,15 @@ class PositionDriver(object):
                     "trailValue": trigger_order["trail_value"]
                 }
 
-                logging.info(f"Opening trigger order: {str(trigger_order_params)}")
                 try:
+                    logging.info(f"Opening trigger order: {str(trigger_order_params)}")
                     response = self.ftx_rest_api.post("conditional_orders", trigger_order_params)
                     logging.info(f"FTX API response: {str(response)}")
-                    time.sleep(0.25)
                 except Exception as e:
                     logging.error("An error occurred when opening position:")
                     logging.error(e)
+
+                time.sleep(0.25)
 
             self.position_state = PositionStateEnum.OPENED
             self._watch_market(position_config["max_open_duration"])
@@ -98,7 +101,7 @@ class PositionDriver(object):
         if self.position_state == PositionStateEnum.OPENED:
             order_params = {
                 "market": self.market,
-                "side": "sell" if self.position_side == OrderSideEnum.BUY else "buy",
+                "side": "sell" if self.position_side == SideEnum.BUY else "buy",
                 "price": None,
                 "type": "market",
                 "size": self.position_size,
@@ -113,7 +116,7 @@ class PositionDriver(object):
                 logging.error("An error occurred when closing position:")
                 logging.error(e)
 
-                time.sleep(0.25)
+            time.sleep(0.25)
 
             try:
                 logging.info(f"Canceling all orders")
@@ -149,6 +152,7 @@ class PositionDriver(object):
         """
 
         opened_duration = 0
+        position: PositionDataDict = Optional[None]
 
         while self._t_run:
             for i in range(_WORKER_SLEEP_TIME_BETWEEN_LOOPS):
@@ -158,10 +162,27 @@ class PositionDriver(object):
                 else:
                     break
 
-            # Update market price
-            logging.info("Retrieving orders")
-            response = self.ftx_rest_api.get("conditional_orders", {"market": self.market})
-            [logging.info(f"FTX API response: {str(resp)}") for resp in response]
+            try:
+                logging.info("Retrieving trigger orders")
+                response = self.ftx_rest_api.get("conditional_orders", {"market": self.market})
+                [logging.info(f"FTX API response: {str(resp)}") for resp in response]
+            except Exception as e:
+                logging.error("An error occurred when cancelling orders:")
+                logging.error(e)
+
+            try:
+                logging.info("Retrieving position")
+                response = self.ftx_rest_api.get("positions")
+                positions = [format_position_raw_data(position) for position in response if
+                             position["future"].upper() == self.market.upper()]
+
+                if len(positions) == 1:
+                    position = positions[0]
+                    logging.info(f"FTX API response: {str(position)}")
+
+            except Exception as e:
+                logging.error("An error occurred when retrieving position:")
+                logging.error(e)
 
             logging.info("Checking position close condition:")
             logging.info(f"Order opened duration is {opened_duration}")
@@ -169,6 +190,9 @@ class PositionDriver(object):
             if opened_duration > max_open_duration:
                 logging.info("Max open duration reached !")
 
-            if opened_duration >= max_open_duration:
+            if position is not None and position["open_size"] == 0:
+                logging.info("Position open size is 0")
+
+            if opened_duration >= max_open_duration or (position is not None and position["open_size"] == 0):
                 self.close_position_and_cancel_orders()
                 break

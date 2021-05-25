@@ -3,9 +3,9 @@ import logging
 import math
 import time
 
-from core.enums.order_side_enum import OrderSideEnum
 from core.enums.order_type_enum import OrderTypeEnum
 from core.enums.position_state_enum import PositionStateEnum
+from core.enums.side_enum import SideEnum
 from core.enums.trigger_order_type_enum import TriggerOrderTypeEnum
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.models.market_data_dict import MarketDataDict
@@ -19,7 +19,6 @@ from strategies.twitter_elon_musk_doge_tracker.enums.probability_enum import Pro
 from strategies.twitter_elon_musk_doge_tracker.order_decision_maker import OrderDecisionMaker
 from strategies.twitter_elon_musk_doge_tracker.twitter_api import TwitterApi
 from tools.utils import format_wallet_raw_data, format_market_raw_data
-
 
 DEFAULT_DECIDING_TIMEOUT = 30  # Time for taking the decision to buy DOGE according to volume check
 
@@ -47,7 +46,6 @@ POSITION_MAX_PRICE = 250000  # Won't be able to open a position with usd price h
 SUB_POSITION_MAX_PRICE = 10000  # Maximum position price before splitting position order into smaller ones
 
 TWITTER_ACCOUNT = "elonmusk"
-
 
 _SLEEP_TIME_BETWEEN_LOOPS = 5
 
@@ -138,10 +136,11 @@ class TwitterElonMuskDogeTracker(Strategy):
 
         if self.position_driver.position_state == PositionStateEnum.NOT_OPENED:
             response = self.ftx_rest_api.get("wallet/balances")
-            wallets = [wallet for wallet in response if wallet["coin"] == 'USD' and wallet["free"] >= 10]
+            wallets = [format_wallet_raw_data(wallet) for wallet in response if
+                       wallet["coin"] == 'USD' and wallet["free"] >= 10]
 
             if len(wallets) == 1:
-                wallet: WalletDict = format_wallet_raw_data(wallets[0])
+                wallet: WalletDict = wallets[0]
                 applied_leverage = SAFE_LEVERAGE if \
                     self.last_tweet_doge_oriented_probability == ProbabilityEnum.NOT_PROBABLE else BASE_LEVERAGE
                 position_price = min(math.floor(wallet["free"]) * applied_leverage, POSITION_MAX_PRICE)
@@ -211,7 +210,7 @@ class TwitterElonMuskDogeTracker(Strategy):
                     "max_open_duration": MAX_OPEN_DURATION
                 }
 
-                self.position_driver.open_position("DOGE-PERP", OrderSideEnum.BUY, position_config)
+                self.position_driver.open_position("DOGE-PERP", SideEnum.BUY, position_config)
 
     def fetch_tweets(self):
         """Fetch tweets"""

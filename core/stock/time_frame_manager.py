@@ -3,10 +3,10 @@ import math
 import threading
 import time
 
+from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.stock.stock_data_manager import MAX_ITEM_IN_DATA_SET
 from core.stock.stock_data_manager import StockDataManager
 from exceptions.ftx_rest_api_exception import FtxRestApiException
-from core.ftx.rest.ftx_rest_api import FtxRestApi
 from tools.utils import format_ohlcv_raw_data
 
 SUPPORTED_TIME_FRAME_LENGTH = [15, 60, 300, 900, 3600, 14400, 86400]
