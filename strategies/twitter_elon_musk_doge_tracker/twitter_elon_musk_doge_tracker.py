@@ -26,11 +26,11 @@ SAFE_LEVERAGE = 8  # Will be used in case of TWITTER_ACCOUNT answering to someon
 BASE_LEVERAGE = 15  # Will be used otherwise
 
 # First take profit
-TP1_TARGET_PERCENTAGE = 4
+TP1_TARGET_PERCENTAGE = 5
 TP1_SIZE_RATIO = 0.3
 
 # Second take profit
-TP2_TARGET_PERCENTAGE = 8
+TP2_TARGET_PERCENTAGE = 8.5
 TP2_SIZE_RATIO = 0.4
 
 # Last take profit
@@ -46,6 +46,7 @@ POSITION_MAX_PRICE = 250000  # Won't be able to open a position with usd price h
 SUB_POSITION_MAX_PRICE = 10000  # Maximum position price before splitting position order into smaller ones
 
 TWITTER_ACCOUNT = "elonmusk"
+BYPASS_DECISION_MAKER = False
 
 _SLEEP_TIME_BETWEEN_LOOPS = 5
 
@@ -103,8 +104,8 @@ class TwitterElonMuskDogeTracker(Strategy):
 
         decision_taken = False
         if self.is_deciding:
-            if self.order_decision_maker.decide(self.last_tweet_doge_oriented_probability):
-                logging.info("Decision has been made to buy ! Let's run the position driver")
+            if self.order_decision_maker.decide(self.last_tweet_doge_oriented_probability) or BYPASS_DECISION_MAKER:
+                logging.info("Decision has been made to buy ! Let's open the position")
                 decision_taken = True
                 self.deciding_timeout = 0
                 self.open_position()
