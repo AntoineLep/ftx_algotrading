@@ -115,9 +115,7 @@ class TwitterElonMuskDogeTracker(Strategy):
         # Update values before next loop
         if self.deciding_timeout <= 0:
             if self.is_deciding:
-                if decision_taken:
-                    logging.info("Decision making succeeded")
-                else:
+                if decision_taken is False:
                     logging.info("Decision making timed out")
 
                 self.is_deciding = False
@@ -245,7 +243,7 @@ class TwitterElonMuskDogeTracker(Strategy):
         probable_related_words = ["moon", "mars", "hodl", "hold", "coin"]
         last_tweet["text"] = last_tweet["text"].lower()
 
-        if str(last_tweet["text"]).startswith("@"):
+        if str(last_tweet["text"]).startswith("@") or str(last_tweet["text"]).startswith("RT @"):
             logging.info("Answering someone, can have weird market reaction")
             self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
         else:
