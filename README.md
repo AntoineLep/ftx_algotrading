@@ -50,6 +50,6 @@ If you're making too much money out of this trading bot and feel like you have t
 hesitate to give your feedback or to share some of your profit at my ETH address:
 `0xb27daa27010fc68A69b6361CCAECCE14aBEea4A8`
 
-Issues and PR are welcomed
+Issues and PR are welcome
 
 Enjoy !
