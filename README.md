@@ -26,14 +26,18 @@ It has some internal configuration using globals to set up position open and clo
 internal `config/private/twitter_config.py` file that has to be created before being able to run it. As
 for `ftx_config.py`, it comes with a template.
 
-> :warning: Make sure to use x20 leverage activated on your sub account before using this strategy (account > settings > margin)
-.
+> :warning: Make sure to use x20 leverage on your sub account before using this strategy (account > settings > margin)
 
 ### Create your own
 
-Feel free to create your own strategy in the strategy folder or reuse the existing ones.
-You can use ftx api examples to send trading orders. See [FTX official documentation](https://docs.ftx.com/).
-You can use the PositionDriver class as well to run position with more ease
+Feel free to create your own strategy in the strategy folder or reuse the existing ones. You can use ftx api examples to
+send trading orders. See [FTX official documentation](https://docs.ftx.com/).
+
+You can use the PositionDriver class as well to run position with more ease.
+It allows to create simple position opening setup with trigger orders for taking profit or stopping losses.
+
+
+![image](https://user-images.githubusercontent.com/6230724/119690499-0a9f4700-be4a-11eb-92f7-7259a13eedc2.png)
 
 ## Disclaimer
 
