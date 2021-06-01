@@ -243,9 +243,12 @@ class TwitterElonMuskDogeTracker(Strategy):
         probable_related_words = ["moon", "mars", "hodl", "hold", "coin"]
         last_tweet["text"] = last_tweet["text"].lower()
 
-        if str(last_tweet["text"]).startswith("@") or str(last_tweet["text"]).startswith("RT @"):
+        if str(last_tweet["text"]).startswith("@"):
             logging.info("Answering someone, can have weird market reaction")
             self.last_tweet_doge_oriented_probability = ProbabilityEnum.NOT_PROBABLE
+        elif str(last_tweet["text"]).startswith("rt @"):
+            logging.info("Retweeting, can have weird market reaction")
+            self.last_tweet_doge_oriented_probability = ProbabilityEnum.UNKNOWN
         else:
             tweet_contains_attachment = "attachments" in last_tweet
             tweet_contains_text = " " in last_tweet["text"]
