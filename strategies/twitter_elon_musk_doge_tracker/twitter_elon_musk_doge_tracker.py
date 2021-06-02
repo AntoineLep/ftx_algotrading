@@ -38,12 +38,12 @@ TP3_TARGET_PERCENTAGE = 12
 # TP3_SIZE_RATIO Will be filled with remaining position size
 
 # Stop loss
-SL_PERCENTAGE = 0.4
+SL_PERCENTAGE = 0.5
 
 MAX_OPEN_DURATION = 60 * 4
 
-POSITION_MAX_PRICE = 250000  # Won't be able to open a position with usd price higher than this
-SUB_POSITION_MAX_PRICE = 10000  # Maximum position price before splitting position order into smaller ones
+POSITION_MAX_PRICE = 100000  # Won't be able to open a position with usd price higher than this
+SUB_POSITION_MAX_PRICE = 20000  # Maximum position price before splitting position order into smaller ones
 
 TWITTER_ACCOUNT = "elonmusk"
 BYPASS_DECISION_MAKER = False
