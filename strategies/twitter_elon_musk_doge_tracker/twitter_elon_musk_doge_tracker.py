@@ -26,19 +26,19 @@ SAFE_LEVERAGE = 8  # Will be used in case of TWITTER_ACCOUNT answering to someon
 BASE_LEVERAGE = 15  # Will be used otherwise
 
 # First take profit
-TP1_TARGET_PERCENTAGE = 5
+TP1_TARGET_PERCENTAGE = 2
 TP1_SIZE_RATIO = 0.3
 
 # Second take profit
-TP2_TARGET_PERCENTAGE = 8.5
+TP2_TARGET_PERCENTAGE = 5
 TP2_SIZE_RATIO = 0.4
 
 # Last take profit
-TP3_TARGET_PERCENTAGE = 12
+TP3_TARGET_PERCENTAGE = 9
 # TP3_SIZE_RATIO Will be filled with remaining position size
 
 # Stop loss
-SL_PERCENTAGE = 0.5
+SL_PERCENTAGE = 1
 
 MAX_OPEN_DURATION = 60 * 4
 
