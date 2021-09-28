@@ -16,10 +16,9 @@ class ListingSniper(Strategy):
         logging.info("ListingSniper run strategy")
         super(ListingSniper, self).__init__()
 
-        self.cpt = 1
         self._sniped = False
         self.market: str = "BLT/USD"
-        self.invest_amount = 800  # USD amount to invest on the coin as listed
+        self.invest_amount = 1  # USD amount to invest on the coin as listed
         self.ftx_ws_client: FtxWebsocketClient = FtxWebsocketClient()
         self.ftx_ws_client.connect()
         self.ftx_rest_api: FtxRestApi = FtxRestApi()
@@ -52,9 +51,6 @@ class ListingSniper(Strategy):
                 "size": order_size
             }
 
-            if self.cpt < 5:
-                raise Exception("waiting a bit")
-
             try:
                 logging.info(f"Opening position: {str(order_params)}")
                 response = self.ftx_rest_api.post("orders", order_params)
@@ -71,7 +67,6 @@ class ListingSniper(Strategy):
 
     def after_loop(self) -> None:
         time.sleep(10)
-        self.cpt += 1
 
     def cleanup(self) -> None:
         """Clean strategy execution"""
