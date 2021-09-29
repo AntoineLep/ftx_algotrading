@@ -12,11 +12,7 @@ Also don't forget to fill the `application_config.py` file with the main strateg
 
 ## Trading strategies
 
-This project comes with two built-in strategies:
-
-### best_strategy_ever
-
-A basic strategy for testing purposes
+This project comes with some built-in strategies:
 
 ### twitter_elon_musk_doge_tracker
 
@@ -27,6 +23,16 @@ internal `config/private/twitter_config.py` file that has to be created before b
 for `ftx_config.py`, it comes with a template.
 
 > :warning: Make sure to use x20 leverage on your sub account before using this strategy (account > settings > margin)
+
+### listing_sniper
+
+A strategy to snipe a given pair listing.
+It has some internal configuration using globals to configure which amount to invest and to set up the market pair to 
+snipe
+
+### best_strategy_ever
+
+A basic strategy for testing purposes
 
 ### Create your own
 
