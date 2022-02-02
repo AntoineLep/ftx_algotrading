@@ -26,21 +26,21 @@ SAFE_LEVERAGE = 8  # Will be used in case of TWITTER_ACCOUNT answering to someon
 BASE_LEVERAGE = 15  # Will be used otherwise
 
 # First take profit
-TP1_TARGET_PERCENTAGE = 6
+TP1_TARGET_PERCENTAGE = 10
 TP1_SIZE_RATIO = 0.3
 
 # Second take profit
-TP2_TARGET_PERCENTAGE = 9
+TP2_TARGET_PERCENTAGE = 15
 TP2_SIZE_RATIO = 0.4
 
 # Last take profit
-TP3_TARGET_PERCENTAGE = 12
+TP3_TARGET_PERCENTAGE = 20
 # TP3_SIZE_RATIO Will be filled with remaining position size
 
 # Stop loss
 SL_PERCENTAGE = 1
 
-MAX_OPEN_DURATION = 60 * 4
+MAX_OPEN_DURATION = 60 * 6
 
 POSITION_MAX_PRICE = 100000  # Won't be able to open a position with usd price higher than this
 SUB_POSITION_MAX_PRICE = 20000  # Maximum position price before splitting position order into smaller ones
@@ -239,7 +239,7 @@ class TwitterElonMuskDogeTracker(Strategy):
         logging.info("Processing new tweet:")
         logging.info(json.dumps(last_tweet, indent=4, sort_keys=True))
 
-        doge_related_words = ["doge", "dog", "shiba"]
+        doge_related_words = ["doge", "dog", "shiba", "floki"]
         probable_related_words = ["moon", "mars", "hodl", "hold", "coin"]
         last_tweet["text"] = last_tweet["text"].lower()
 

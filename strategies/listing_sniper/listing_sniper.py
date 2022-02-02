@@ -6,8 +6,8 @@ from core.strategy.strategy import Strategy
 from core.ftx.ws.ftx_websocket_client import FtxWebsocketClient
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 
-AMOUNT_TO_INVEST = 800  # USD amount to invest on the coin to be listed
-MARKET_PAIR_TO_SNIPE = "BLT/USD"  # Trading pair to snipe
+AMOUNT_TO_INVEST = 3000  # USD amount to invest on the coin to be listed
+MARKET_PAIR_TO_SNIPE = "GARI/USD"  # Trading pair to snipe
 
 
 class ListingSniper(Strategy):
@@ -49,7 +49,8 @@ class ListingSniper(Strategy):
                 "side": "buy",
                 "price": None,
                 "type": "market",
-                "size": order_size
+                "size": order_size,
+                "ioc": False
             }
 
             try:

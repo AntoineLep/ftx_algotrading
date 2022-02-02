@@ -5,7 +5,7 @@ from strategies.listing_sniper.listing_sniper import ListingSniper
 
 name = "ftx_algotrading"
 version = "1.0"
-strategy = ListingSniper()
+strategy = TwitterElonMuskDogeTracker()
 
 log = {
     "level": "info",
