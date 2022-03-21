@@ -6,8 +6,17 @@ from core.strategy.strategy import Strategy
 from core.ftx.ws.ftx_websocket_client import FtxWebsocketClient
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 
-AMOUNT_TO_INVEST = 3000  # USD amount to invest on the coin to be listed
-MARKET_PAIR_TO_SNIPE = "GARI/USD"  # Trading pair to snipe
+# Trading pair to snipe
+MARKET_PAIR_TO_SNIPE = "CTX/USD"
+
+# USD amount to invest on the coin to be listed
+# /!\ Make sure your wallet have more (twice is good) than this amount because due to the high demand,
+# the order fill price can be higher than the computed one based on last stock data
+AMOUNT_TO_INVEST = 1500
+
+# Minimum size increment to compute order size
+# Ensure your order size will be a multiple of the size increment value
+SIZE_INCREMENT = 10
 
 
 class ListingSniper(Strategy):
@@ -42,7 +51,8 @@ class ListingSniper(Strategy):
             if market_enabled is False:
                 raise Exception(f"Market {MARKET_PAIR_TO_SNIPE} is not yet enabled")
 
-            order_size = math.floor(AMOUNT_TO_INVEST / response["ask"])
+            order_size = math.floor(AMOUNT_TO_INVEST / response["ask"]) - \
+                math.floor(AMOUNT_TO_INVEST / response["ask"]) % SIZE_INCREMENT
 
             order_params = {
                 "market": MARKET_PAIR_TO_SNIPE,

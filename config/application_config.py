@@ -7,7 +7,7 @@ from strategies.multi_coin_abnormal_volumes_tracker.multi_coin_abnormal_volumes_
 
 name = "ftx_algotrading"
 version = "1.0"
-strategy = MultiCoinAbnormalVolumesTracker()
+strategy = TwitterElonMuskDogeTracker()
 
 log = {
     "level": "info",
