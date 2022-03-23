@@ -3,7 +3,6 @@ import time
 import math
 
 from core.strategy.strategy import Strategy
-from core.ftx.ws.ftx_websocket_client import FtxWebsocketClient
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 
 # Trading pair to snipe
