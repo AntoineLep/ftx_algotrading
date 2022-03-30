@@ -17,17 +17,20 @@ _WORKER_SLEEP_TIME_BETWEEN_LOOPS = 10
 class PositionDriver(object):
     """Position driver"""
 
-    def __init__(self, ftx_rest_api: FtxRestApi):
+    def __init__(self, ftx_rest_api: FtxRestApi,
+                 worker_sleep_time_between_loops: int = _WORKER_SLEEP_TIME_BETWEEN_LOOPS):
         """
         Position driver constructor
 
         :param ftx_rest_api: Instance of FtxRestApi
+        :param worker_sleep_time_between_loops: Time to wait before looking for market again
         """
         self.ftx_rest_api: FtxRestApi = ftx_rest_api
         self.market: str = ""
         self.position_state: PositionStateEnum = PositionStateEnum.NOT_OPENED
         self.position_size: int = 0
         self.position_side: Optional[SideEnum] = None
+        self._worker_sleep_time_between_loops = worker_sleep_time_between_loops
         self._t_run: bool = True
         self._t: Optional[threading.Thread] = None
         logging.debug(f"New position driver created!")
