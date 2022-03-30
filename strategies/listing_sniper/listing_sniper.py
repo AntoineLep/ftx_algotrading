@@ -3,7 +3,6 @@ import time
 import math
 
 from core.strategy.strategy import Strategy
-from core.ftx.ws.ftx_websocket_client import FtxWebsocketClient
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 
 # Trading pair to snipe
@@ -29,8 +28,6 @@ class ListingSniper(Strategy):
         super(ListingSniper, self).__init__()
 
         self._sniped = False
-        self.ftx_ws_client: FtxWebsocketClient = FtxWebsocketClient()
-        self.ftx_ws_client.connect()
         self.ftx_rest_api: FtxRestApi = FtxRestApi()
 
     def before_loop(self) -> None:
