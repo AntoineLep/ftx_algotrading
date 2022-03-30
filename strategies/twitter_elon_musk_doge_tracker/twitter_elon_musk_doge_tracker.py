@@ -130,7 +130,7 @@ class TwitterElonMuskDogeTracker(Strategy):
         logging.info("TwitterElonMuskDogeTracker cleanup")
         self.doge_manager.stop_all_time_frame_acq()
 
-    def open_position(self):
+    def open_position(self) -> None:
         """Compute position subsets, tps, and sl. Then, open a position"""
 
         if self.position_driver.position_state == PositionStateEnum.NOT_OPENED:

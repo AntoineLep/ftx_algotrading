@@ -1,6 +1,6 @@
 import logging
-import time
 import math
+import time
 
 from core.enums.order_type_enum import OrderTypeEnum
 from core.enums.position_state_enum import PositionStateEnum
@@ -99,127 +99,13 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
             try:
                 pair_manager: PairManagerDict = self.pair_manager_list[pair_to_track]
 
-                # Check the coin is not currently bought (position driver running)
-                if pair_manager["position_driver"] is not None \
-                        and pair_manager["position_driver"].position_state is PositionStateEnum.OPENED:
-                    continue  # Skip this coin
+                if self.decide(pair_to_track):
+                    logging.info(f"Market:{pair_to_track}, all decision checks passed ! Let's buy this :)")
 
-                # First time we loop after a position was closed
-                if pair_manager["last_position_driver_state"] == PositionStateEnum.OPENED:
-                    pair_manager["last_position_driver_state"] = PositionStateEnum.NOT_OPENED
-                    pair_manager["jail_start_timestamp"] = int(time.time())
-
-                # Coin is in jail after a position was closed
-                if int(time.time()) < pair_manager["jail_start_timestamp"] + JAIL_DURATION:
-                    continue  # Skip this coin
-
-                stock_data_manager = pair_manager["crypto_pair_manager"].get_time_frame(60).stock_data_manager
-
-                # Not enough data
-                if len(stock_data_manager.stock_data_list) < LONG_MA_VOLUME_DEPTH:
-                    continue
-
-                # Check average LONG_MA_VOLUME_DEPTH (lma) candles volume is VOLUME_CHECK_FACTOR_SIZE times more
-                # than the average SHORT_MA_VOLUME_DEPTH (sma)
-                lma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-LONG_MA_VOLUME_DEPTH:]])
-                lma_avg_volume = lma_sum_volume / LONG_MA_VOLUME_DEPTH
-
-                sma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-SHORT_MA_VOLUME_DEPTH:]])
-                sma_avg_volume = sma_sum_volume / SHORT_MA_VOLUME_DEPTH
-
-                # If recent volumes are not VOLUME_CHECK_FACTOR_SIZE time more than old volumes
-                if sma_avg_volume / lma_avg_volume < VOLUME_CHECK_FACTOR_SIZE:
-                    continue  # Skip this coin
-
-                logging.info(f"Market:{pair_to_track}, volume factor check passes !"
-                             f"{sma_avg_volume} > {lma_avg_volume} * {VOLUME_CHECK_FACTOR_SIZE}")
-
-                individual_candle_volume_check = True
-                for i in range(1, SHORT_MA_VOLUME_DEPTH + 1):
-                    individual_candle_volume_check = stock_data_manager.stock_data_list[-i].volume > lma_avg_volume
-                    if individual_candle_volume_check is False:
-                        break
-
-                if individual_candle_volume_check is False:
-                    logging.info(f"Market:{pair_to_track}, volume individual candle check fail !")
-                    continue  # Skip this coin
-
-                # Check the volume are "good" (avoid unsellable coins)
-                if sma_avg_volume < MINIMUM_AVERAGE_VOLUME:
-                    logging.info(f"Market:{pair_to_track}, volume minimum value check fail !"
-                                 f"{sma_avg_volume} < {MINIMUM_AVERAGE_VOLUME}")
-                    continue  # Skip this coin
-
-                logging.info(f"Market:{pair_to_track}, Volume minimum value check passes !"
-                             f"{sma_avg_volume} >= {MINIMUM_AVERAGE_VOLUME}")
-
-                # Check the price is up from at least MINIMUM_PRICE_VARIATION %
-                candle_before = stock_data_manager.stock_data_list[-(SHORT_MA_VOLUME_DEPTH + 1)]
-                last_candle = stock_data_manager.stock_data_list[-1]
-
-                if last_candle.close_price < candle_before.open_price * (1 + MINIMUM_PRICE_VARIATION / 100):
-                    logging.info(f"Market:{pair_to_track}, price minimum check fail !"
-                                 f"{last_candle.close_price} < {candle_before.open_price} * {MINIMUM_PRICE_VARIATION}%")
-                    continue  # Skip this coin
-
-                logging.info(f"Market:{pair_to_track}, price minimum check passes !"
-                             f"{last_candle.close_price} >= {candle_before.open_price} * {MINIMUM_PRICE_VARIATION}%")
-
-                logging.info(f"Market:{pair_to_track}, all checks passed ! Let's buy this :)")
-
-                pair_manager["position_driver"] = PositionDriver(self.ftx_rest_api,
-                                                                 POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS)
-
-                response = self.ftx_rest_api.get("wallet/balances")
-                wallets = [format_wallet_raw_data(wallet) for wallet in response if
-                           wallet["coin"] == 'USD' and wallet["free"] >= 10]
-
-                if len(wallets) != 1:
-                    logging.info(f"Market:{pair_to_track}, Can't open a position :/. Wallet USD collateral low")
-                    continue  # Funds are not sufficient
-
-                wallet: WalletDict = wallets[0]
-                position_price = math.floor(wallet["free"]) * WALLET_POSITION_MAX_RATIO
-
-                if position_price < MINIMUM_OPENABLE_POSITION_PRICE:
-                    logging.info(f"Market:{pair_to_track}, Can't open a position :/. Wallet USD collateral low")
-                    continue  # Funds are not sufficient
-
-                # Retrieve market data
-                logging.info("Retrieving market price")
-                response = self.ftx_rest_api.get(f"markets/{pair_to_track}")
-                logging.info(f"FTX API response: {str(response)}")
-
-                market_data: MarketDataDict = format_market_raw_data(response)
-
-                position_size = math.floor(position_price / response["ask"]) - \
-                    math.floor(position_price / response["ask"]) % market_data["sizeIncrement"]
-
-                # Configure position settings
-
-                openings = [{
-                    "price": None,
-                    "size": position_size,
-                    "type": OrderTypeEnum.MARKET
-                }]
-
-                trailing_stop: TriggerOrderConfigDict = {
-                    "size": position_size,
-                    "type": TriggerOrderTypeEnum.TRAILING_STOP,
-                    "reduce_only": True,
-                    "trigger_price": None,
-                    "order_price": None,
-                    "trail_value": response["ask"] * TRAILING_STOP_PERCENTAGE / 100 * -1
-                }
-
-                position_config: PositionConfigDict = {
-                    "openings": openings,
-                    "trigger_orders": [trailing_stop],
-                    "max_open_duration": POSITION_MAX_OPEN_DURATION
-                }
-
-                pair_manager["position_driver"].open_position(pair_to_track, SideEnum.BUY, position_config)
-                pair_manager["last_position_driver_state"] = PositionStateEnum.OPENED
+                    if self.open_position(pair_to_track):
+                        pair_manager["last_position_driver_state"] = PositionStateEnum.OPENED
+                    else:
+                        logging.info(f"Market:{pair_to_track}, position driver attempt to open position failed.")
             except Exception as e:
                 logging.error(e)
                 continue  # Loop over the next coin
@@ -236,3 +122,144 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
             i += 1
             logging.info(f"Stopping time frame acquisition on pair {i} of {len(PAIRS_TO_TRACK)}: {pair_to_track}")
             self.pair_manager_list[pair_to_track]["crypto_pair_manager"].stop_all_time_frame_acq()
+
+    def decide(self, pair: str) -> bool:
+        """
+        Decide to open or not a position on a given pair
+
+        :param pair: The pair to open a position on
+        :return: True if the position is successfully opened, False otherwise
+        """
+
+        pair_manager: PairManagerDict = self.pair_manager_list[pair]
+
+        # Check the coin is not currently bought (position driver running)
+        if pair_manager["position_driver"] is not None \
+                and pair_manager["position_driver"].position_state is PositionStateEnum.OPENED:
+            return False  # Skip this coin
+
+        # First time we loop after a position was closed
+        if pair_manager["last_position_driver_state"] == PositionStateEnum.OPENED:
+            pair_manager["last_position_driver_state"] = PositionStateEnum.NOT_OPENED
+            pair_manager["jail_start_timestamp"] = int(time.time())
+
+        # Coin is in jail after a position was closed
+        if int(time.time()) < pair_manager["jail_start_timestamp"] + JAIL_DURATION:
+            return False  # Skip this coin
+
+        stock_data_manager = pair_manager["crypto_pair_manager"].get_time_frame(60).stock_data_manager
+
+        # Not enough data
+        if len(stock_data_manager.stock_data_list) < LONG_MA_VOLUME_DEPTH:
+            return False
+
+        # Check average LONG_MA_VOLUME_DEPTH (lma) candles volume is VOLUME_CHECK_FACTOR_SIZE times more
+        # than the average SHORT_MA_VOLUME_DEPTH (sma)
+        lma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-LONG_MA_VOLUME_DEPTH:]])
+        lma_avg_volume = lma_sum_volume / LONG_MA_VOLUME_DEPTH
+
+        sma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-SHORT_MA_VOLUME_DEPTH:]])
+        sma_avg_volume = sma_sum_volume / SHORT_MA_VOLUME_DEPTH
+
+        # If recent volumes are not VOLUME_CHECK_FACTOR_SIZE time more than old volumes
+        if sma_avg_volume / lma_avg_volume < VOLUME_CHECK_FACTOR_SIZE:
+            return False  # Skip this coin
+
+        logging.info(f"Market:{pair}, volume factor check passes !"
+                     f"{sma_avg_volume} > {lma_avg_volume} * {VOLUME_CHECK_FACTOR_SIZE}")
+
+        individual_candle_volume_check = True
+        for i in range(1, SHORT_MA_VOLUME_DEPTH + 1):
+            individual_candle_volume_check = stock_data_manager.stock_data_list[-i].volume > lma_avg_volume
+            if individual_candle_volume_check is False:
+                break
+
+        if individual_candle_volume_check is False:
+            logging.info(f"Market:{pair}, volume individual candle check fail !")
+            return False  # Skip this coin
+
+        # Check the volume are "good" (avoid unsellable coins)
+        if sma_avg_volume < MINIMUM_AVERAGE_VOLUME:
+            logging.info(f"Market:{pair}, volume minimum value check fail !"
+                         f"{sma_avg_volume} < {MINIMUM_AVERAGE_VOLUME}")
+            return False  # Skip this coin
+
+        logging.info(f"Market:{pair}, Volume minimum value check passes !"
+                     f"{sma_avg_volume} >= {MINIMUM_AVERAGE_VOLUME}")
+
+        # Check the price is up from at least MINIMUM_PRICE_VARIATION %
+        candle_before = stock_data_manager.stock_data_list[-(SHORT_MA_VOLUME_DEPTH + 1)]
+        last_candle = stock_data_manager.stock_data_list[-1]
+
+        if last_candle.close_price < candle_before.open_price * (1 + MINIMUM_PRICE_VARIATION / 100):
+            logging.info(f"Market:{pair}, price minimum check fail !"
+                         f"{last_candle.close_price} < {candle_before.open_price} * {MINIMUM_PRICE_VARIATION}%")
+            return False  # Skip this coin
+
+        logging.info(f"Market:{pair}, price minimum check passes !"
+                     f"{last_candle.close_price} >= {candle_before.open_price} * {MINIMUM_PRICE_VARIATION}%")
+
+        return True
+
+    def open_position(self, pair: str) -> bool:
+        """
+        Compute position price, setup stop loss and open position
+
+        :param pair: The pair to open a position on
+        :return: True if the position is successfully opened, False otherwise
+        """
+
+        pair_manager: PairManagerDict = self.pair_manager_list[pair]
+        pair_manager["position_driver"] = PositionDriver(self.ftx_rest_api,
+                                                         POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS)
+
+        response = self.ftx_rest_api.get("wallet/balances")
+        wallets = [format_wallet_raw_data(wallet) for wallet in response if
+                   wallet["coin"] == 'USD' and wallet["free"] >= 10]
+
+        if len(wallets) != 1:
+            logging.info(f"Market:{pair}, Can't open a position :/. Wallet USD collateral low")
+            return False  # Funds are not sufficient
+
+        wallet: WalletDict = wallets[0]
+        position_price = math.floor(wallet["free"]) * WALLET_POSITION_MAX_RATIO
+
+        if position_price < MINIMUM_OPENABLE_POSITION_PRICE:
+            logging.info(f"Market:{pair}, Can't open a position :/. Wallet USD collateral low")
+            return False  # Funds are not sufficient
+
+        # Retrieve market data
+        logging.info("Retrieving market price")
+        response = self.ftx_rest_api.get(f"markets/{pair}")
+        logging.info(f"FTX API response: {str(response)}")
+
+        market_data: MarketDataDict = format_market_raw_data(response)
+
+        position_size = math.floor(position_price / response["ask"]) - \
+            math.floor(position_price / response["ask"]) % market_data["sizeIncrement"]
+
+        # Configure position settings
+
+        openings = [{
+            "price": None,
+            "size": position_size,
+            "type": OrderTypeEnum.MARKET
+        }]
+
+        trailing_stop: TriggerOrderConfigDict = {
+            "size": position_size,
+            "type": TriggerOrderTypeEnum.TRAILING_STOP,
+            "reduce_only": True,
+            "trigger_price": None,
+            "order_price": None,
+            "trail_value": response["ask"] * TRAILING_STOP_PERCENTAGE / 100 * -1
+        }
+
+        position_config: PositionConfigDict = {
+            "openings": openings,
+            "trigger_orders": [trailing_stop],
+            "max_open_duration": POSITION_MAX_OPEN_DURATION
+        }
+
+        pair_manager["position_driver"].open_position(pair, SideEnum.BUY, position_config)
+        return True
