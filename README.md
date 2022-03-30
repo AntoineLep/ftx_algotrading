@@ -30,6 +30,15 @@ A strategy to snipe a given pair listing.
 It has some internal configuration using globals to configure which amount to invest and to set up the market pair to 
 snipe
 
+### multi coin abnormal volumes tracker
+
+A strategy that scan a list of pairs in order to find abnormal volume increase.
+For each listed coins, the strategy will compute a moving average of the last candles volumes to compare it with a
+bigger segment of candles.
+
+It has some internal configuration using globals to configure volume check (factor, short ma, long ma), price variation,
+open and close conditions, and some other stuff documented inside strategy file.
+
 ### best_strategy_ever
 
 A basic strategy for testing purposes

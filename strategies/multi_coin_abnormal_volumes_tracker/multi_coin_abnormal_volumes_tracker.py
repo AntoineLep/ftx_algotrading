@@ -48,11 +48,11 @@ VOLUME_CHECK_FACTOR_SIZE = 20
 
 MINIMUM_AVERAGE_VOLUME = 20000  # Minimum average volume to pass validation (avoid unsellable coin)
 MINIMUM_PRICE_VARIATION = 2  # Percentage of variation a coin must have during its last VOLUME_CHECK_ON_DEPTH candles
-POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120 # When a position driver is running, check market every x sec
+POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120  # When a position driver is running, check market every x sec
 WALLET_POSITION_MAX_RATIO = 1/10  # Wallet position price max ratio
 TRAILING_STOP_PERCENTAGE = 8  # Trailing stop percentage
 POSITION_MAX_OPEN_DURATION = 4 * 60 * 60
-JAIL_DURATION = 60 * 60
+JAIL_DURATION = 60 * 60  # Time for wish a coin can't be re bought after a position is closed on it
 
 
 class MultiCoinAbnormalVolumesTracker(Strategy):
