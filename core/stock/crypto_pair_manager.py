@@ -22,11 +22,12 @@ class CryptoPairManager(object):
         self._ftx_rest_api = ftx_rest_api
         logging.info(f"New crypto pair manager created! Market: {self.market}")
 
-    def add_time_frame(self, time_frame_length: int) -> None:
+    def add_time_frame(self, time_frame_length: int, auto_compute_indicators: bool = True) -> None:
         """
         Add a new time frame
 
         :param time_frame_length: The length of the time frame in seconds (15, 60, 300, 900, 3600, 14400, 86400)
+        :param auto_compute_indicators: automatically compute indicators or not
         """
         if time_frame_length not in SUPPORTED_TIME_FRAME_LENGTH:
             raise FtxAlgotradingException(
@@ -37,7 +38,8 @@ class CryptoPairManager(object):
             logging.warning(f"Time frame length ({time_frame_length}) is already managed for market {self.market}")
             return
 
-        self._time_frames[time_frame_length] = TimeFrameManager(time_frame_length, self.market, self._ftx_rest_api)
+        self._time_frames[time_frame_length] = TimeFrameManager(time_frame_length, self.market, self._ftx_rest_api,
+                                                                auto_compute_indicators)
 
     def start_time_frame_acq(self, time_frame_length: int) -> None:
         """

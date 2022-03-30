@@ -13,16 +13,18 @@ MAX_ITEM_IN_DATA_SET: int = 300
 class StockDataManager(object):
     """Stock data manager"""
 
-    def __init__(self, data_list: List[RawStockDataDict] = None):
+    def __init__(self, data_list: List[RawStockDataDict] = None, auto_compute_indicators: bool = True):
         """
         Stock data manager constructor
 
         :param data_list: Data candle list
+        :param auto_compute_indicators: automatically compute indicators or not
         """
         self._data_line: Set[Candle] = set()
         self._data_line_cursor: int = -1  # Last candle identifier performed
         self.stock_data_list: List[Candle] = []  # Last candle values
         self.stock_indicators: Optional[stockstats.StockDataFrame] = None
+        self._auto_compute_indicators = auto_compute_indicators  # Indicate if the stock_indicators should be computed
 
         if data_list is not None:
             self.update_data(data_list)
@@ -33,6 +35,8 @@ class StockDataManager(object):
 
         :param data_list: The raw data list
         """
+
+        # Add new stock data (can be 0, one or several)
         self._update_data_line(data_list)
         self.stock_data_list = self._get_data_line()
 
@@ -41,7 +45,9 @@ class StockDataManager(object):
                 # Put the cursor at the position just before the first candle
                 self._data_line_cursor = self.stock_data_list[0].identifier - 1
 
-            self._compute_indicators()
+            # auto compute indicators if set
+            if self._auto_compute_indicators:
+                self._compute_indicators()
 
         if len(self.stock_data_list) > MAX_ITEM_IN_IND_LIST:
             self.stock_data_list = self.stock_data_list[-MAX_ITEM_IN_IND_LIST:]

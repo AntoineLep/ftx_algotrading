@@ -16,15 +16,17 @@ MAX_RETRY_DELAY = 120
 class TimeFrameManager(object):
     """Time frame manager"""
 
-    def __init__(self, time_frame_length: int, market: str, ftx_rest_api: FtxRestApi):
+    def __init__(self, time_frame_length: int, market: str, ftx_rest_api: FtxRestApi,
+                 auto_compute_indicators: bool = True):
         """
         Time frame manager constructor
 
         :param time_frame_length: The length of the time frame in seconds
         :param market: Name of the market (ex: BTC-PERP)
         :param ftx_rest_api: Instance of FtxRestApi
+        :param auto_compute_indicators: automatically compute indicators or not
         """
-        self.stock_data_manager: StockDataManager = StockDataManager()
+        self.stock_data_manager: StockDataManager = StockDataManager(auto_compute_indicators=auto_compute_indicators)
         self.market: str = market
         self._time_frame_length: int = time_frame_length
         self._t_run: bool = True
@@ -63,7 +65,7 @@ class TimeFrameManager(object):
 
         while True:
             try:
-                logging.info(f"Market: {self.market}, time frame: {self._time_frame_length} sec. Retrieving OHLC data")
+                logging.debug(f"Market: {self.market}, time frame: {self._time_frame_length} sec. Retrieving OHLC data")
 
                 return self._ftx_rest_api.get(f"markets/{self.market}/candles", {
                     "resolution": self._time_frame_length,
