@@ -18,23 +18,25 @@ from strategies.multi_coin_abnormal_volumes_tracker.models.pair_manager_dict imp
 from tools.utils import format_wallet_raw_data, format_market_raw_data
 
 PAIRS_TO_TRACK = [
-    "MEDIA-PERP", "TRYB-PERP", "MCB-PERP", "ORBS-PERP", "HOLY-PERP", "BNT-PERP", "AXS-PERP", "CRV-PERP", "FIL-PERP",
-    "DRGN-PERP", "MTA-PERP", "CELO-PERP", "BRZ-PERP", "BAO-PERP", "CEL-PERP", "SRN-PERP", "LTC-PERP", "ALT-PERP",
-    "MNGO-PERP", "YFII-PERP", "BAND-PERP", "STMX-PERP", "ROOK-PERP", "MVDA10-PERP", "POLIS-PERP", "ALGO-PERP",
-    "HT-PERP", "ALPHA-PERP", "PUNDIX-PERP", "CONV-PERP", "SKL-PERP", "EDEN-PERP", "AMPL-PERP", "RNDR-PERP", "ETC-PERP",
-    "TOMO-PERP", "MID-PERP", "OKB-PERP", "SCRT-PERP", "FLM-PERP", "DAWN-PERP", "BAL-PERP", "XTZ-PERP", "KNC-PERP",
-    "ZIL-PERP", "EXCH-PERP", "C98-PERP", "PROM-PERP", "ALCX-PERP", "PRIV-PERP", "DENT-PERP", "GALA-PERP", "ALGO-PERP",
-    "PERP-PERP", "ONT-PERP", "LINA-PERP", "HUM-PERP", "HOT-PERP", "RAMP-PERP", "DASH-PERP", "EOS-PERP", "DYDX-PERP",
-    "TRU-PERP", "TULIP-PERP", "BADGER-PERP", "ZRX-PERP", "SOS-PERP", "DODO-PERP", "BIT-PERP", "SPELL-PERP", "SNX-PERP",
-    "BOBA-PERP", "TLM-PERP", "XEM-PERP", "KAVA-PERP", "HBAR-PERP", "REEF-PERP", "REN-PERP", "ICP-PERP", "LOOKS-PERP",
-    "AUDIO-PERP", "KIN-PERP", "CLV-PERP", "SC-PERP", "STX-PERP", "ICX-PERP", "SHIT-PERP", "BCH-PERP", "LRC-PERP",
-    "TONCOIN-PERP", "BAT-PERP", "IOTA-PERP", "ATLAS-PERP", "XMR-PERP", "LEO-PERP", "ENS-PERP", "AR-PERP", "FIDA-PERP",
-    "CVC-PERP", "DEFI-PERP", "SHIB-PERP", "RSR-PERP", "STEP-PERP", "CREAM-PERP", "PEOPLE-PERP", "ONE-PERP", "RAY-PERP",
-    "RON-PERP", "NEO-PERP", "ALICE-PERP", "OXY-PERP", "OMG-PERP", "NEAR-PERP", "AGLD-PERP", "ENJ-PERP", "AAVE-PERP",
-    "CAKE-PERP", "KSM-PERP", "STORJ-PERP", "HNT-PERP", "COMP-PERP", "YFI-PERP", "SXP-PERP", "XLM-PERP", "SRM-PERP",
-    "SLP-PERP", "THETA-PERP", "ROSE-PERP", "MKR-PERP", "QTUM-PERP", "1INCH-PERP", "TRX-PERP", "EGLD-PERP", "CRO-PERP",
-    "WAVES-PERP", "GRT-PERP", "CHR-PERP", "MAPS-PERP", "CHZ-PERP", "VET-PERP", "FLOW-PERP", "ZEC-PERP", "RUNE-PERP",
-    "MER-PERP", "MTL-PERP"
+    "BTC-PERP", "ETH-PERP", "SOL-PERP", "LUNA-PERP", "WAVES-PERP", "GMT-PERP", "AXS-PERP", "AVAX-PERP", "ZIL-PERP",
+    "RUNE-PERP", "NEAR-PERP", "AAVE-PERP", "APE-PERP", "ETC-PERP", "FIL-PERP", "ATOM-PERP", "LOOKS-PERP", "FTM-PERP",
+    "ADA-PERP", "XRP-PERP", "CHZ-PERP", "LRC-PERP", "DOT-PERP", "VET-PERP", "GALA-PERP", "SUSHI-PERP", "FTT-PERP",
+    "LINK-PERP", "MATIC-PERP", "SRM-PERP", "BNB-PERP", "SAND-PERP", "COMP-PERP", "EOS-PERP", "KNC-PERP", "LTC-PERP",
+    "ALGO-PERP", "SKL-PERP", "BCH-PERP", "THETA-PERP", "SLP-PERP", "MANA-PERP", "DYDX-PERP", "GRT-PERP", "FLOW-PERP",
+    "ONE-PERP", "NEO-PERP", "ZEC-PERP", "PEOPLE-PERP", "SNX-PERP", "CVC-PERP", "ICP-PERP", "1INCH-PERP", "HBAR-PERP",
+    "IMX-PERP", "CRO-PERP", "AR-PERP", "YFI-PERP", "RON-PERP", "OMG-PERP", "REN-PERP", "SHIB-PERP", "XTZ-PERP",
+    "ROSE-PERP", "CELO-PERP", "ANC-PERP", "QTUM-PERP", "CAKE-PERP", "ALPHA-PERP", "ICX-PERP", "BSV-PERP", "TRX-PERP",
+    "EGLD-PERP", "CHR-PERP", "SXP-PERP", "RSR-PERP", "ENJ-PERP", "AUDIO-PERP", "ENS-PERP", "MKR-PERP", "XLM-PERP",
+    "RAY-PERP", "ZRX-PERP", "AGLD-PERP", "HNT-PERP", "ALICE-PERP", "PERP-PERP", "BAT-PERP", "XMR-PERP", "KSM-PERP",
+    "STMX-PERP", "XEM-PERP", "MINA-PERP", "KAVA-PERP", "HOT-PERP", "DASH-PERP", "OKB-PERP", "TLM-PERP", "STX-PERP",
+    "SPELL-PERP", "STORJ-PERP", "GLMR-PERP", "TRU-PERP", "DENT-PERP", "ATLAS-PERP", "DODO-PERP", "SCRT-PERP",
+    "BAL-PERP", "ONT-PERP", "RNDR-PERP", "CVX-PERP", "BADGER-PERP", "SC-PERP", "C98-PERP", "IOTA-PERP", "MTL-PERP",
+    "CLV-PERP", "BAND-PERP", "TOMO-PERP", "ALCX-PERP", "PUNDIX-PERP", "CREAM-PERP", "LINA-PERP", "MAPS-PERP",
+    "TONCOIN-PERP", "POLIS-PERP", "REEF-PERP", "FXS-PERP", "STEP-PERP", "FIDA-PERP", "HUM-PERP", "HT-PERP", "FLM-PERP",
+    "BNT-PERP", "AMPL-PERP", "XAUT-PERP", "PROM-PERP", "KSOS-PERP", "BIT-PERP", "BOBA-PERP", "DAWN-PERP", "RAMP-PERP",
+    "YFII-PERP", "OXY-PERP", "SOS-PERP", "LEO-PERP", "ORBS-PERP", "MTA-PERP", "TRYB-PERP", "MCB-PERP", "EDEN-PERP",
+    "MNGO-PERP", "CONV-PERP", "BAO-PERP", "SECO-PERP", "CEL-PERP", "HOLY-PERP", "ROOK-PERP", "MER-PERP", "TULIP-PERP",
+    "ASD-PERP", "KIN-PERP", "MOB-PERP", "BRZ-PERP", "SRN-PERP", "BTT-PERP", "MEDIA-PERP"
 ]
 
 # FTX api rate limit is 10 requests per second
@@ -92,9 +94,9 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
     def loop(self) -> None:
         """The strategy core"""
 
-        try:
-            # For each coin
-            for pair_to_track in PAIRS_TO_TRACK:
+        # For each coin
+        for pair_to_track in PAIRS_TO_TRACK:
+            try:
                 pair_manager: PairManagerDict = self.pair_manager_list[pair_to_track]
 
                 # Check the coin is not currently bought (position driver running)
@@ -131,6 +133,16 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
                 logging.info(f"Market:{pair_to_track}, volume factor check passes !"
                              f"{sma_avg_volume} > {lma_avg_volume} * {VOLUME_CHECK_FACTOR_SIZE}")
+
+                individual_candle_volume_check = True
+                for i in range(1, SHORT_MA_VOLUME_DEPTH + 1):
+                    individual_candle_volume_check = stock_data_manager.stock_data_list[-i].volume > lma_avg_volume
+                    if individual_candle_volume_check is False:
+                        break
+
+                if individual_candle_volume_check is False:
+                    logging.info(f"Market:{pair_to_track}, volume individual candle check fail !")
+                    continue  # Skip this coin
 
                 # Check the volume are "good" (avoid unsellable coins)
                 if sma_avg_volume < MINIMUM_AVERAGE_VOLUME:
@@ -208,9 +220,9 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
                 pair_manager["position_driver"].open_position(pair_to_track, SideEnum.BUY, position_config)
                 pair_manager["last_position_driver_state"] = PositionStateEnum.OPENED
-
-        except Exception as e:
-            logging.error(e)
+            except Exception as e:
+                logging.error(e)
+                continue  # Loop over the next coin
 
     def after_loop(self) -> None:
         time.sleep(10)
