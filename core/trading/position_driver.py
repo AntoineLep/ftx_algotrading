@@ -158,7 +158,7 @@ class PositionDriver(object):
         position: PositionDataDict = Optional[None]
 
         while self._t_run:
-            for i in range(_WORKER_SLEEP_TIME_BETWEEN_LOOPS):
+            for i in range(self._worker_sleep_time_between_loops):
                 if self._t_run:
                     time.sleep(1)
                     opened_duration += 1

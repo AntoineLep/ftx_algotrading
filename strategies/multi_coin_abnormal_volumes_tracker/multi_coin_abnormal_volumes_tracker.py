@@ -50,6 +50,7 @@ MINIMUM_AVERAGE_VOLUME = 20000  # Minimum average volume to pass validation (avo
 MINIMUM_PRICE_VARIATION = 2  # Percentage of variation a coin must have during its last SHORT_MA_VOLUME_DEPTH candles
 POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120  # When a position driver is running, check market every x sec
 WALLET_POSITION_MAX_RATIO = 1/10  # Wallet position price max ratio
+MINIMUM_OPENABLE_POSITION_PRICE = 50  # Don't open a position for less than this amount
 TRAILING_STOP_PERCENTAGE = 8  # Trailing stop percentage
 POSITION_MAX_OPEN_DURATION = 4 * 60 * 60
 JAIL_DURATION = 60 * 60  # Time for wish a coin can't be re bought after a position is closed on it
@@ -166,7 +167,11 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
                     continue  # Funds are not sufficient
 
                 wallet: WalletDict = wallets[0]
-                position_price = math.floor(wallet["free"]) / WALLET_POSITION_MAX_RATIO
+                position_price = math.floor(wallet["free"]) * WALLET_POSITION_MAX_RATIO
+
+                if position_price < MINIMUM_OPENABLE_POSITION_PRICE:
+                    logging.info(f"Market:{pair_to_track}, Can't open a position :/. Wallet USD collateral low")
+                    continue  # Funds are not sufficient
 
                 # Retrieve market data
                 logging.info("Retrieving market price")

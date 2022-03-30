@@ -68,14 +68,15 @@ def format_market_raw_data(market_raw_data: dict) -> Optional[MarketDataDict]:
     :return: The formatted data list
     """
     if all(required_field in market_raw_data for required_field in ["name", "price", "ask", "bid", "change1h",
-                                                                    "change24h"]):
+                                                                    "change24h", "sizeIncrement"]):
         return {
             "name": market_raw_data["name"],
             "price": float(market_raw_data["price"]),
             "ask": float(market_raw_data["ask"]),
             "bid": float(market_raw_data["bid"]),
             "change1h": float(market_raw_data["change1h"]),
-            "change24h": float(market_raw_data["change24h"])
+            "change24h": float(market_raw_data["change24h"]),
+            "sizeIncrement": float(market_raw_data["sizeIncrement"])
         }
     else:
         logging.warning(
