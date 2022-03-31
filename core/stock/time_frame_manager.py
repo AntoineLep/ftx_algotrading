@@ -16,6 +16,8 @@ MAX_RETRY_DELAY = 120
 class TimeFrameManager(object):
     """Time frame manager"""
 
+    log_received_stock_data = True
+
     def __init__(self, time_frame_length: int, market: str, ftx_rest_api: FtxRestApi,
                  auto_compute_indicators: bool = True):
         """
@@ -52,8 +54,9 @@ class TimeFrameManager(object):
             self.stock_data_manager.update_data([format_ohlcv_raw_data(r, self._time_frame_length) for r in response])
             self._last_retrieved_data_timestamp = max([math.floor(r["time"] / 1000) for r in response])
 
-            logging.info(f"Market: {self.market}, time frame: {self._time_frame_length} sec. Last received point")
-            logging.info(response[-1])
+            if TimeFrameManager.log_received_stock_data:
+                logging.info(f"Market: {self.market}, time frame: {self._time_frame_length} sec. Last received point")
+                logging.info(response[-1])
 
     def _feed(self) -> [dict]:
         """

@@ -12,16 +12,17 @@ from core.models.position_config_dict import PositionConfigDict
 from core.models.trigger_order_config_dict import TriggerOrderConfigDict
 from core.models.wallet_dict import WalletDict
 from core.stock.crypto_pair_manager import CryptoPairManager
+from core.stock.time_frame_manager import TimeFrameManager
 from core.strategy.strategy import Strategy
 from core.trading.position_driver import PositionDriver
 from strategies.multi_coin_abnormal_volumes_tracker.models.pair_manager_dict import PairManagerDict
 from tools.utils import format_wallet_raw_data, format_market_raw_data
 
 PAIRS_TO_TRACK = [
-    "BTC-PERP", "ETH-PERP", "SOL-PERP", "LUNA-PERP", "WAVES-PERP", "GMT-PERP", "AXS-PERP", "AVAX-PERP", "ZIL-PERP",
+    "SOL-PERP", "LUNA-PERP", "WAVES-PERP", "GMT-PERP", "AXS-PERP", "AVAX-PERP", "ZIL-PERP",
     "RUNE-PERP", "NEAR-PERP", "AAVE-PERP", "APE-PERP", "ETC-PERP", "FIL-PERP", "ATOM-PERP", "LOOKS-PERP", "FTM-PERP",
     "ADA-PERP", "XRP-PERP", "CHZ-PERP", "LRC-PERP", "DOT-PERP", "VET-PERP", "GALA-PERP", "SUSHI-PERP", "FTT-PERP",
-    "LINK-PERP", "MATIC-PERP", "SRM-PERP", "BNB-PERP", "SAND-PERP", "COMP-PERP", "EOS-PERP", "KNC-PERP", "LTC-PERP",
+    "LINK-PERP", "MATIC-PERP", "SRM-PERP", "SAND-PERP", "COMP-PERP", "EOS-PERP", "KNC-PERP", "LTC-PERP",
     "ALGO-PERP", "SKL-PERP", "BCH-PERP", "THETA-PERP", "SLP-PERP", "MANA-PERP", "DYDX-PERP", "GRT-PERP", "FLOW-PERP",
     "ONE-PERP", "NEO-PERP", "ZEC-PERP", "PEOPLE-PERP", "SNX-PERP", "CVC-PERP", "ICP-PERP", "1INCH-PERP", "HBAR-PERP",
     "IMX-PERP", "CRO-PERP", "AR-PERP", "YFI-PERP", "RON-PERP", "OMG-PERP", "REN-PERP", "SHIB-PERP", "XTZ-PERP",
@@ -33,10 +34,10 @@ PAIRS_TO_TRACK = [
     "BAL-PERP", "ONT-PERP", "RNDR-PERP", "CVX-PERP", "BADGER-PERP", "SC-PERP", "C98-PERP", "IOTA-PERP", "MTL-PERP",
     "CLV-PERP", "BAND-PERP", "TOMO-PERP", "ALCX-PERP", "PUNDIX-PERP", "CREAM-PERP", "LINA-PERP", "MAPS-PERP",
     "TONCOIN-PERP", "POLIS-PERP", "REEF-PERP", "FXS-PERP", "STEP-PERP", "FIDA-PERP", "HUM-PERP", "HT-PERP", "FLM-PERP",
-    "BNT-PERP", "AMPL-PERP", "XAUT-PERP", "PROM-PERP", "KSOS-PERP", "BIT-PERP", "BOBA-PERP", "DAWN-PERP", "RAMP-PERP",
+    "BNT-PERP", "AMPL-PERP", "PROM-PERP", "KSOS-PERP", "BIT-PERP", "BOBA-PERP", "DAWN-PERP", "RAMP-PERP",
     "YFII-PERP", "OXY-PERP", "SOS-PERP", "LEO-PERP", "ORBS-PERP", "MTA-PERP", "TRYB-PERP", "MCB-PERP", "EDEN-PERP",
     "MNGO-PERP", "CONV-PERP", "BAO-PERP", "SECO-PERP", "CEL-PERP", "HOLY-PERP", "ROOK-PERP", "MER-PERP", "TULIP-PERP",
-    "ASD-PERP", "KIN-PERP", "MOB-PERP", "BRZ-PERP", "SRN-PERP", "BTT-PERP", "MEDIA-PERP"
+    "ASD-PERP", "KIN-PERP", "MOB-PERP", "SRN-PERP", "BTT-PERP", "MEDIA-PERP"
 ]
 
 # FTX api rate limit is 10 requests per second
@@ -46,7 +47,7 @@ LONG_MA_VOLUME_DEPTH = 100  # The number of candles to be used as volume compari
 SHORT_MA_VOLUME_DEPTH = 5  # The number of candles used to compare volumes on (must be < than LONG_MA_VOLUME_DEPTH)
 
 # Factor by which the SHORT_MA_VOLUME_DEPTH volumes must be higher than LONG_MA_VOLUME_DEPTH volumes
-VOLUME_CHECK_FACTOR_SIZE = 20
+VOLUME_CHECK_FACTOR_SIZE = 12
 
 MINIMUM_AVERAGE_VOLUME = 20000  # Minimum average volume to pass validation (avoid unsellable coin)
 MINIMUM_PRICE_VARIATION = 2  # Percentage of variation a coin must have during its last SHORT_MA_VOLUME_DEPTH candles
@@ -66,6 +67,9 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
         logging.info("MultiCoinAbnormalVolumesTracker run strategy")
         super(MultiCoinAbnormalVolumesTracker, self).__init__()
+
+        # Deactivate stock data log for readability purposes
+        TimeFrameManager.log_received_stock_data = False
 
         self.ftx_rest_api: FtxRestApi = FtxRestApi()
         self.pair_manager_list = {}  # { [pair]: pair_manager }
@@ -94,6 +98,8 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
     def loop(self) -> None:
         """The strategy core"""
 
+        logging.info("Scanning markets ...")
+
         # For each coin
         for pair_to_track in PAIRS_TO_TRACK:
             try:
@@ -109,6 +115,7 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
             except Exception as e:
                 logging.error(e)
                 continue  # Loop over the next coin
+        logging.info("Markets scanned !")
 
     def after_loop(self) -> None:
         time.sleep(10)
@@ -150,12 +157,14 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         stock_data_manager = pair_manager["crypto_pair_manager"].get_time_frame(60).stock_data_manager
 
         # Not enough data
-        if len(stock_data_manager.stock_data_list) < LONG_MA_VOLUME_DEPTH:
+        if len(stock_data_manager.stock_data_list) < LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH:
             return False
 
         # Check average LONG_MA_VOLUME_DEPTH (lma) candles volume is VOLUME_CHECK_FACTOR_SIZE times more
         # than the average SHORT_MA_VOLUME_DEPTH (sma)
-        lma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-LONG_MA_VOLUME_DEPTH:]])
+        lma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[
+                                                -(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH)
+                                                :-SHORT_MA_VOLUME_DEPTH]])
         lma_avg_volume = lma_sum_volume / LONG_MA_VOLUME_DEPTH
 
         sma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-SHORT_MA_VOLUME_DEPTH:]])
@@ -163,9 +172,13 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
         # If recent volumes are not VOLUME_CHECK_FACTOR_SIZE time more than old volumes
         if sma_avg_volume == 0 or lma_avg_volume == 0 or sma_avg_volume / lma_avg_volume < VOLUME_CHECK_FACTOR_SIZE:
+            # log volumes that are higher than half the required volumes
+            if lma_avg_volume != 0 and sma_avg_volume / lma_avg_volume > math.floor(VOLUME_CHECK_FACTOR_SIZE / 3):
+                logging.info(f"Market:{pair}, volume factor check: "
+                             f"{sma_avg_volume} / {lma_avg_volume} = {sma_avg_volume / lma_avg_volume}")
             return False  # Skip this coin
 
-        logging.info(f"Market:{pair}, volume factor check passes !"
+        logging.info(f"Market:{pair}, volume factor check passes ! "
                      f"{sma_avg_volume} > {lma_avg_volume} * {VOLUME_CHECK_FACTOR_SIZE}")
 
         individual_candle_volume_check = True
@@ -181,11 +194,11 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
         # Check the volume are "good" (avoid unsellable coins)
         if sma_avg_volume < MINIMUM_AVERAGE_VOLUME:
-            logging.info(f"Market:{pair}, volume minimum value check fail !"
+            logging.info(f"Market:{pair}, volume minimum value check fail ! "
                          f"{sma_avg_volume} < {MINIMUM_AVERAGE_VOLUME}")
             return False  # Skip this coin
 
-        logging.info(f"Market:{pair}, Volume minimum value check passes !"
+        logging.info(f"Market:{pair}, Volume minimum value check passes ! "
                      f"{sma_avg_volume} >= {MINIMUM_AVERAGE_VOLUME}")
 
         # Check the price is up from at least MINIMUM_PRICE_VARIATION %
@@ -193,11 +206,11 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         last_candle = stock_data_manager.stock_data_list[-1]
 
         if last_candle.close_price < candle_before.open_price * (1 + MINIMUM_PRICE_VARIATION / 100):
-            logging.info(f"Market:{pair}, price minimum check fail !"
+            logging.info(f"Market:{pair}, price minimum check fail ! "
                          f"{last_candle.close_price} < {candle_before.open_price} * {MINIMUM_PRICE_VARIATION}%")
             return False  # Skip this coin
 
-        logging.info(f"Market:{pair}, price minimum check passes !"
+        logging.info(f"Market:{pair}, price minimum check passes ! "
                      f"{last_candle.close_price} >= {candle_before.open_price} * {MINIMUM_PRICE_VARIATION}%")
 
         return True
@@ -236,8 +249,8 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
         market_data: MarketDataDict = format_market_raw_data(response)
 
-        position_size = math.floor(position_price / response["ask"]) - \
-            math.floor(position_price / response["ask"]) % market_data["sizeIncrement"]
+        position_size = math.floor(position_price / market_data["ask"]) - \
+            math.floor(position_price / market_data["ask"]) % market_data["size_increment"]
 
         # Configure position settings
 
@@ -253,7 +266,7 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
             "reduce_only": True,
             "trigger_price": None,
             "order_price": None,
-            "trail_value": response["ask"] * TRAILING_STOP_PERCENTAGE / 100 * -1
+            "trail_value": market_data["ask"] * TRAILING_STOP_PERCENTAGE / 100 * -1
         }
 
         position_config: PositionConfigDict = {

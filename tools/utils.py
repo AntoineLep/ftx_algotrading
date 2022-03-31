@@ -8,6 +8,7 @@ from core.enums.trigger_order_type_enum import TriggerOrderTypeEnum
 from core.models.market_data_dict import MarketDataDict
 from core.models.position_data_dict import PositionDataDict
 from core.models.raw_stock_data_dict import RawStockDataDict
+from core.models.ticker_data_dict import TickerDataDict
 from core.models.wallet_dict import WalletDict
 from exceptions.ftx_algotrading_exception import FtxAlgotradingException
 
@@ -76,7 +77,7 @@ def format_market_raw_data(market_raw_data: dict) -> Optional[MarketDataDict]:
             "bid": float(market_raw_data["bid"]),
             "change1h": float(market_raw_data["change1h"]),
             "change24h": float(market_raw_data["change24h"]),
-            "sizeIncrement": float(market_raw_data["sizeIncrement"])
+            "size_increment": float(market_raw_data["sizeIncrement"])
         }
     else:
         logging.warning(
@@ -161,3 +162,27 @@ def get_trigger_order_type(trigger_order_type: TriggerOrderTypeEnum) -> str:
     """
     return "trailingStop" if trigger_order_type == TriggerOrderTypeEnum.TRAILING_STOP \
         else "takeProfit" if trigger_order_type == TriggerOrderTypeEnum.TAKE_PROFIT else "stop"
+
+
+def format_ticker_raw_data(ticker_raw_data: dict) -> Optional[TickerDataDict]:
+    """
+    Format ticker raw data
+
+    :param ticker_raw_data: The raw data
+    :return: The formatted ticker data
+    """
+    logging.info(ticker_raw_data)
+    if all(required_field in ticker_raw_data for required_field in ["bid", "ask", "bidSize", "askSize","last", "time"]):
+        return {
+            "bid": float(ticker_raw_data["bid"]),
+            "ask": float(ticker_raw_data["ask"]),
+            "bid_size": float(ticker_raw_data["bidSize"]),
+            "ask_size": float(ticker_raw_data["askSize"]),
+            "last": float(ticker_raw_data["last"]),
+            "time": float(ticker_raw_data["time"]),
+        }
+    else:
+        logging.warning(
+            "Data should be composed of 6 fields: <bid>, <ask>, <bidSize>, <askSize>, <last>, <time>")
+
+    return None

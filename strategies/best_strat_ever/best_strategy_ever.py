@@ -37,7 +37,7 @@ class BestStrategyEver(Strategy):
 
     def loop(self) -> None:
         """The strategy core"""
-        # logging.info(self.ftx_ws_client.get_ticker('DOGE-PERP'))
+        logging.info(self.ftx_ws_client.get_ticker('BTC-PERP'))
 
         # response = self.ftx_rest_api.get(f"markets/DOGE-PERP")
         # logging.info(f"FTX API response: {str(response)}")
@@ -50,7 +50,7 @@ class BestStrategyEver(Strategy):
             return
 
         pair_to_track = "DOGE-PERP"
-        self.position_driver = PositionDriver(self.ftx_rest_api, 30)
+        self.position_driver = PositionDriver(self.ftx_rest_api, 10)
 
         response = self.ftx_rest_api.get("wallet/balances")
         wallets = [format_wallet_raw_data(wallet) for wallet in response if
@@ -61,7 +61,7 @@ class BestStrategyEver(Strategy):
             return
 
         wallet: WalletDict = wallets[0]
-        position_price = math.floor(wallet["free"]) * 1 / 10
+        position_price = 10  # math.floor(wallet["free"]) * 1 / 20
 
         # Retrieve market data
         logging.info("Retrieving market price")
@@ -70,8 +70,8 @@ class BestStrategyEver(Strategy):
 
         market_data: MarketDataDict = format_market_raw_data(response)
 
-        position_size = math.floor(position_price / response["ask"]) - \
-            math.floor(position_price / response["ask"]) % market_data["sizeIncrement"]
+        position_size = math.floor(position_price / market_data["ask"]) - \
+            math.floor(position_price / market_data["ask"]) % market_data["size_increment"]
 
         # Configure position settings
 
@@ -81,18 +81,27 @@ class BestStrategyEver(Strategy):
             "type": OrderTypeEnum.MARKET
         }]
 
-        trailing_stop: TriggerOrderConfigDict = {
+        tp: TriggerOrderConfigDict = {
             "size": position_size,
-            "type": TriggerOrderTypeEnum.TRAILING_STOP,
+            "type": TriggerOrderTypeEnum.TAKE_PROFIT,
             "reduce_only": True,
-            "trigger_price": None,
+            "trigger_price": market_data["ask"] + market_data["ask"] * 1 / 100,
             "order_price": None,
-            "trail_value": response["ask"] * 8 / 100 * -1  # 8% trail
+            "trail_value": None
+        }
+
+        sl: TriggerOrderConfigDict = {
+            "size": position_size,
+            "type": TriggerOrderTypeEnum.STOP,
+            "reduce_only": True,
+            "trigger_price": market_data["ask"] - market_data["ask"] * 1 / 100,
+            "order_price": None,
+            "trail_value": None
         }
 
         position_config: PositionConfigDict = {
             "openings": openings,
-            "trigger_orders": [trailing_stop],
+            "trigger_orders": [tp, sl],
             "max_open_duration": 120
         }
 
@@ -100,7 +109,7 @@ class BestStrategyEver(Strategy):
         self.opened = True
 
     def after_loop(self) -> None:
-        time.sleep(10)
+        time.sleep(1)
 
     def cleanup(self) -> None:
         """Clean strategy execution"""

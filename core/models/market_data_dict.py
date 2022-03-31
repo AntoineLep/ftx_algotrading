@@ -8,6 +8,6 @@ class MarketDataDict(TypedDict):
     price: float
     ask: float
     bid: float
-    sizeIncrement: float
+    size_increment: float
     change1h: float
     change24h: float
