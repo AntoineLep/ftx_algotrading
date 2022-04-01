@@ -12,4 +12,4 @@ class PairManagerDict(TypedDict):
     position_driver: Optional[PositionDriver]
     last_position_driver_state: PositionStateEnum
     jail_start_timestamp: int
-    invested: int
+    invested: float
