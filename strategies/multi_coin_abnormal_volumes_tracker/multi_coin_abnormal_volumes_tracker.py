@@ -54,7 +54,8 @@ MINIMUM_PRICE_VARIATION = 2  # Percentage of variation a coin must have during i
 POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120  # When a position driver is running, check market every x sec
 WALLET_POSITION_MAX_RATIO = 1/5  # Wallet position price max ratio
 MINIMUM_OPENABLE_POSITION_PRICE = 50  # Don't open a position for less than this amount
-TRAILING_STOP_PERCENTAGE = 5  # Trailing stop percentage
+TRAILING_STOP_PERCENTAGE = 8  # Trailing stop percentage
+STOP_LOSS_PERCENTAGE = 2  # Stop loss percentage
 POSITION_MAX_OPEN_DURATION = 4 * 60 * 60
 JAIL_DURATION = 60 * 60  # Time for wish a coin can't be re bought after a position is closed on it
 
@@ -237,6 +238,8 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
             return False  # Funds are not sufficient
 
         wallet: WalletDict = wallets[0]
+        logging.info(f"Market:{pair}, {str(wallet)}")
+
         position_price = math.floor(wallet["free"]) * WALLET_POSITION_MAX_RATIO
 
         if position_price < MINIMUM_OPENABLE_POSITION_PRICE:
@@ -261,6 +264,15 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
             "type": OrderTypeEnum.MARKET
         }]
 
+        sl: TriggerOrderConfigDict = {
+            "size": position_size,
+            "type": TriggerOrderTypeEnum.STOP,
+            "reduce_only": True,
+            "trigger_price": market_data["ask"] - market_data["ask"] * STOP_LOSS_PERCENTAGE / 100,
+            "order_price": None,
+            "trail_value": None
+        }
+
         trailing_stop: TriggerOrderConfigDict = {
             "size": position_size,
             "type": TriggerOrderTypeEnum.TRAILING_STOP,
@@ -272,7 +284,7 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
         position_config: PositionConfigDict = {
             "openings": openings,
-            "trigger_orders": [trailing_stop],
+            "trigger_orders": [sl, trailing_stop],
             "max_open_duration": POSITION_MAX_OPEN_DURATION
         }
 
