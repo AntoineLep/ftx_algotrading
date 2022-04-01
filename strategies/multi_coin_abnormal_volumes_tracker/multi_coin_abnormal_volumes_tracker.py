@@ -75,6 +75,8 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         self.ftx_rest_api: FtxRestApi = FtxRestApi()
         self.pair_manager_list = {}  # { [pair]: pair_manager }
 
+        self.total_invested = 0
+
         i = 0
         for pair_to_track in PAIRS_TO_TRACK:
             i += 1
@@ -87,7 +89,8 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
                 "crypto_pair_manager": crypto_pair_manager,
                 "position_driver": None,
                 "last_position_driver_state": PositionStateEnum.NOT_OPENED,
-                "jail_start_timestamp": 0
+                "jail_start_timestamp": 0,
+                "invested": 0
             }
 
             self.pair_manager_list[pair_to_track] = pair_manager
@@ -148,6 +151,7 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
         # First time we loop after a position was closed
         if pair_manager["last_position_driver_state"] == PositionStateEnum.OPENED:
+            self.total_invested = self.total_invested - pair_manager["invested"]
             pair_manager["last_position_driver_state"] = PositionStateEnum.NOT_OPENED
             pair_manager["jail_start_timestamp"] = int(time.time())
 
@@ -238,13 +242,17 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
             return False  # Funds are not sufficient
 
         wallet: WalletDict = wallets[0]
-        logging.info(f"Market:{pair}, {str(wallet)}")
+        logging.info(f"Market:{pair}, wallet: {str(wallet)}")
 
-        position_price = math.floor(wallet["free"]) * WALLET_POSITION_MAX_RATIO
+        position_price = wallet["free"] * WALLET_POSITION_MAX_RATIO
 
         if position_price < MINIMUM_OPENABLE_POSITION_PRICE:
             logging.info(f"Market:{pair}, Can't open a position :/. Wallet USD collateral low")
             return False  # Funds are not sufficient
+
+        if position_price + self.total_invested > wallet["free"]:
+            logging.info(f"Market:{pair}, Can't open a position :/. Opened positions would exceed wallet balance")
+            return False
 
         # Retrieve market data
         logging.info("Retrieving market price")
@@ -289,4 +297,6 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         }
 
         pair_manager["position_driver"].open_position(pair, SideEnum.BUY, position_config)
+        self.total_invested = self.total_invested + position_price
+        pair_manager["invested"] = position_price
         return True
