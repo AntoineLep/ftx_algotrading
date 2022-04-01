@@ -44,17 +44,17 @@ PAIRS_TO_TRACK = [
 TIME_TO_SLEEP_BETWEEN_TIMEFRAME_LAUNCH = 0.25  # Sleeping 250 ms will avoid errors with a reasonable tolerance
 
 LONG_MA_VOLUME_DEPTH = 100  # The number of candles to be used as volume comparison base
-SHORT_MA_VOLUME_DEPTH = 5  # The number of candles used to compare volumes on (must be < than LONG_MA_VOLUME_DEPTH)
+SHORT_MA_VOLUME_DEPTH = 6  # The number of candles used to compare volumes on (must be < than LONG_MA_VOLUME_DEPTH)
 
 # Factor by which the SHORT_MA_VOLUME_DEPTH volumes must be higher than LONG_MA_VOLUME_DEPTH volumes
-VOLUME_CHECK_FACTOR_SIZE = 12
+VOLUME_CHECK_FACTOR_SIZE = 25
 
 MINIMUM_AVERAGE_VOLUME = 20000  # Minimum average volume to pass validation (avoid unsellable coin)
 MINIMUM_PRICE_VARIATION = 2  # Percentage of variation a coin must have during its last SHORT_MA_VOLUME_DEPTH candles
 POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120  # When a position driver is running, check market every x sec
 WALLET_POSITION_MAX_RATIO = 1/5  # Wallet position price max ratio
 MINIMUM_OPENABLE_POSITION_PRICE = 50  # Don't open a position for less than this amount
-TRAILING_STOP_PERCENTAGE = 8  # Trailing stop percentage
+TRAILING_STOP_PERCENTAGE = 5  # Trailing stop percentage
 POSITION_MAX_OPEN_DURATION = 4 * 60 * 60
 JAIL_DURATION = 60 * 60  # Time for wish a coin can't be re bought after a position is closed on it
 
@@ -207,7 +207,8 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
         if last_candle.close_price < candle_before.open_price * (1 + MINIMUM_PRICE_VARIATION / 100):
             logging.info(f"Market:{pair}, price minimum check fail ! "
-                         f"{last_candle.close_price} < {candle_before.open_price} * {MINIMUM_PRICE_VARIATION}%")
+                         f"{last_candle.close_price} < "
+                         f"{candle_before.open_price * (1 + MINIMUM_PRICE_VARIATION / 100)}")
             return False  # Skip this coin
 
         logging.info(f"Market:{pair}, price minimum check passes ! "
