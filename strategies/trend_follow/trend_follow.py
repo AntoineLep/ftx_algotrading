@@ -20,10 +20,8 @@ from tools.utils import format_ticker_raw_data, format_wallet_raw_data, format_m
 MARKET = "BTC-PERP"
 POSITION_MAX_OPEN_DURATION = 60 * 60 * 4  # Position max open duration
 POSITION_MAX_PRICE = 100  # Position max price
-TRAILING_STOP_PERCENT = 2  # Percentage of the pair price to use for the trailing stop
-
-# TODO: update position driver to delay trigger order when main position is a limit one
-POSITION_ASK_BID_PRICE_DELTA = 5  # Try to get a maker order by placing an offset price
+STOP_LOSS_PERCENTAGE = 2  # Percentage of the pair price used for the stop loss
+TRAILING_STOP_PERCENTAGE = 3  # Percentage of the pair price used for the trailing stop
 
 
 class TrendFollow(Strategy):
@@ -47,8 +45,6 @@ class TrendFollow(Strategy):
 
         # Init loop vars
         self.current_position_side = SideEnum.BUY
-        self.last_wallet_usd_value = 0
-        self.last_position_successful = True
         self.last_position_state = PositionStateEnum.NOT_OPENED
 
     def before_loop(self) -> None:
@@ -70,18 +66,9 @@ class TrendFollow(Strategy):
             if self.last_position_state == PositionStateEnum.OPENED:
                 self.last_position_state = PositionStateEnum.NOT_OPENED
 
-                # Get account available balance
-                response = self.ftx_rest_api.get("wallet/balances")
-                wallets = [format_wallet_raw_data(wallet) for wallet in response if
-                           wallet["coin"] == 'USD']
-
-                # Check that last position was profitable
-                self.last_position_successful = wallets[0]["usd_value"] > self.last_wallet_usd_value
-                self.last_wallet_usd_value = wallets[0]["usd_value"]
-
-                # Keep or reverse the position side based on last trade
-                self.current_position_side = self.current_position_side if self.last_position_successful \
-                    else SideEnum.BUY if self.current_position_side is SideEnum.SELL else SideEnum.SELL
+                # Reverse the position side
+                self.current_position_side = SideEnum.SELL if self.current_position_side == SideEnum.BUY else \
+                    SideEnum.BUY
 
             # Get account available balance
             response = self.ftx_rest_api.get("wallet/balances")
@@ -104,19 +91,13 @@ class TrendFollow(Strategy):
             market_data: MarketDataDict = format_market_raw_data(response)
 
             # Ticker ask is not always filled. Use market data in this case
-            ask = None
-            bid = None
+            ask = market_data["ask"] if ticker_price is None else ticker_price["ask"]
+            bid = market_data["bid"] if ticker_price is None else ticker_price["bid"]
 
             if ticker_price is None:
                 logging.warning(f"Ticker was empty, using stock data instead")
-                ask = market_data["ask"]
-                bid = market_data["bid"]
-            else:
-                ask = ticker_price["ask"]
-                bid = ticker_price["bid"]
 
             pair_price = ask if self.current_position_side == SideEnum.BUY else bid
-
             position_size = position_price / pair_price - position_price / pair_price % market_data["size_increment"]
 
             # Configure position settings
@@ -127,34 +108,33 @@ class TrendFollow(Strategy):
                 "type": OrderTypeEnum.MARKET
             }]
 
-            u_bound = market_data["ask"] + amplitude  # Upper bound
-            l_bound = market_data["ask"] - amplitude  # Lower bound
-
-            tp: TriggerOrderConfigDict = {
-                "size": position_size,
-                "type": TriggerOrderTypeEnum.TAKE_PROFIT,
-                "reduce_only": True,
-                "trigger_price": u_bound if self.current_position_side == SideEnum.BUY else l_bound,
-                "order_price": None,
-                "trail_value": None
-            }
-
             sl: TriggerOrderConfigDict = {
                 "size": position_size,
                 "type": TriggerOrderTypeEnum.STOP,
                 "reduce_only": True,
-                "trigger_price": l_bound if self.current_position_side == SideEnum.BUY else u_bound,
+                "trigger_price": pair_price - pair_price * STOP_LOSS_PERCENTAGE / 100 if
+                self.current_position_side == SideEnum.BUY else pair_price + pair_price * STOP_LOSS_PERCENTAGE / 100,
                 "order_price": None,
                 "trail_value": None
             }
 
+            trailing_stop: TriggerOrderConfigDict = {
+                "size": position_size,
+                "type": TriggerOrderTypeEnum.TRAILING_STOP,
+                "reduce_only": True,
+                "trigger_price": None,
+                "order_price": None,
+                "trail_value": pair_price * TRAILING_STOP_PERCENTAGE / 100 * -1 if
+                self.current_position_side == SideEnum.BUY else pair_price * TRAILING_STOP_PERCENTAGE / 100
+            }
+
             position_config: PositionConfigDict = {
                 "openings": openings,
-                "trigger_orders": [tp, sl],
+                "trigger_orders": [sl, trailing_stop],
                 "max_open_duration": POSITION_MAX_OPEN_DURATION
             }
 
-            self.position_driver.open_position("BTC-PERP", self.current_position_side, position_config)
+            self.position_driver.open_position(MARKET, self.current_position_side, position_config)
         except Exception as e:
             logging.error(e)
 
