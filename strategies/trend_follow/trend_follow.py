@@ -18,13 +18,9 @@ from core.trading.position_driver import PositionDriver
 from tools.utils import format_ticker_raw_data, format_wallet_raw_data, format_market_raw_data
 
 MARKET = "BTC-PERP"
-POSITION_MAX_OPEN_DURATION = 600  # Position max open duration
+POSITION_MAX_OPEN_DURATION = 60 * 60 * 4  # Position max open duration
 POSITION_MAX_PRICE = 100  # Position max price
-
-# Open order tp and sl amplitude will be this times less and more than last candle amplitude (high - low)
-AMPLITUDE_FACTOR_BASED_ON_LAST_CANDLE = 1
-
-AMPLITUDE_MIN_VALUE = 15  # Minimum value of the amplitude between pos and upper / lower bound of tp / sl
+TRAILING_STOP_PERCENT = 2  # Percentage of the pair price to use for the trailing stop
 
 # TODO: update position driver to delay trigger order when main position is a limit one
 POSITION_ASK_BID_PRICE_DELTA = 5  # Try to get a maker order by placing an offset price
@@ -123,17 +119,8 @@ class TrendFollow(Strategy):
 
             position_size = position_price / pair_price - position_price / pair_price % market_data["size_increment"]
 
-            # Compute position amplitude
-            last_candle = self.btc_manager.get_time_frame(15).stock_data_manager.stock_data_list[-1]
-            amplitude = max((last_candle.high_price - last_candle.low_price) / AMPLITUDE_FACTOR_BASED_ON_LAST_CANDLE,
-                            AMPLITUDE_MIN_VALUE)
-
-            # TODO
-            # Compute a price velocity indicator based on ticker average percentage price variation per second
-            # Weight the position amplitude based on last candle with the current velocity indicator
-
             # Configure position settings
-
+            
             openings = [{
                 "price": None,
                 "size": position_size,
