@@ -188,8 +188,8 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
         individual_candle_volume_check = True
         for i in range(1, SHORT_MA_VOLUME_DEPTH + 1):
-            individual_candle_volume_check = stock_data_manager.stock_data_list[-i].volume == 0 \
-                                             or stock_data_manager.stock_data_list[-i].volume > lma_avg_volume
+            individual_candle_volume_check = stock_data_manager.stock_data_list[-i].volume / lma_avg_volume \
+                                             > VOLUME_CHECK_FACTOR_SIZE
             if individual_candle_volume_check is False:
                 break
 
