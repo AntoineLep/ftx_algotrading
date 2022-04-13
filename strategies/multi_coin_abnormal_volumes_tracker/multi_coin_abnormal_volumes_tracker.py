@@ -171,9 +171,9 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
                                                 -(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH)
                                                 :-SHORT_MA_VOLUME_DEPTH]])
 
-        # Ignore zero volumes candle
+        # Compute zero volumes candles number
         zero_volume_candles_number = sum(map(
-            lambda x: x > 0,
+            lambda x: x == 0,
             [d.volume for d in stock_data_manager.stock_data_list[-(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH)
                                                                   :-SHORT_MA_VOLUME_DEPTH]]
         ))
