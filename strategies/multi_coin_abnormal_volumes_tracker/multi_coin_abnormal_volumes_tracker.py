@@ -44,18 +44,18 @@ PAIRS_TO_TRACK = [
 TIME_TO_SLEEP_BETWEEN_TIMEFRAME_LAUNCH = 0.25  # Sleeping 250 ms will avoid errors with a reasonable tolerance
 
 LONG_MA_VOLUME_DEPTH = 100  # The number of candles to be used as volume comparison base
-SHORT_MA_VOLUME_DEPTH = 6  # The number of candles used to compare volumes on (must be < than LONG_MA_VOLUME_DEPTH)
+SHORT_MA_VOLUME_DEPTH = 3  # The number of candles used to compare volumes on (must be < than LONG_MA_VOLUME_DEPTH)
 
 # Factor by which the SHORT_MA_VOLUME_DEPTH volumes must be higher than LONG_MA_VOLUME_DEPTH volumes
-VOLUME_CHECK_FACTOR_SIZE = 25
+VOLUME_CHECK_FACTOR_SIZE = 16
 
-MINIMUM_AVERAGE_VOLUME = 20000  # Minimum average volume to pass validation (avoid unsellable coin)
-MINIMUM_PRICE_VARIATION = 2  # Percentage of variation a coin must have during its last SHORT_MA_VOLUME_DEPTH candles
+MINIMUM_AVERAGE_VOLUME = 15000  # Minimum average volume to pass validation (avoid unsellable coin)
+MINIMUM_PRICE_VARIATION = 0.6  # Percentage of variation a coin must have during its last SHORT_MA_VOLUME_DEPTH candles
 POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120  # When a position driver is running, check market every x sec
-WALLET_POSITION_MAX_RATIO = 1/5  # Wallet position price max ratio
-MINIMUM_OPENABLE_POSITION_PRICE = 50  # Don't open a position for less than this amount
+POSITION_LEVERAGE = 0.2  # Position leverage to apply
+MINIMUM_POSITION_PRICE = 50  # Don't open a position for less than this amount
 TRAILING_STOP_PERCENTAGE = 8  # Trailing stop percentage
-STOP_LOSS_PERCENTAGE = 2  # Stop loss percentage
+STOP_LOSS_PERCENTAGE = 1.4  # Stop loss percentage
 POSITION_MAX_OPEN_DURATION = 4 * 60 * 60
 JAIL_DURATION = 60 * 60  # Time for wish a coin can't be re bought after a position is closed on it
 
@@ -170,7 +170,19 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         lma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[
                                                 -(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH)
                                                 :-SHORT_MA_VOLUME_DEPTH]])
-        lma_avg_volume = lma_sum_volume / LONG_MA_VOLUME_DEPTH
+
+        # Ignore zero volumes candle
+        zero_volume_candles_number = sum(map(
+            lambda x: x > 0,
+            [d.volume for d in stock_data_manager.stock_data_list[-(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH)
+                                                                  :-SHORT_MA_VOLUME_DEPTH]]
+        ))
+
+        # Too many zero volume candles
+        if zero_volume_candles_number > LONG_MA_VOLUME_DEPTH / 3:
+            return False  # Skip this coin
+
+        lma_avg_volume = lma_sum_volume / (LONG_MA_VOLUME_DEPTH - zero_volume_candles_number)
 
         sma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-SHORT_MA_VOLUME_DEPTH:]])
         sma_avg_volume = sma_sum_volume / SHORT_MA_VOLUME_DEPTH
@@ -244,9 +256,9 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         wallet: WalletDict = wallets[0]
         logging.info(f"Market:{pair}, wallet: {str(wallet)}")
 
-        position_price = wallet["free"] * WALLET_POSITION_MAX_RATIO
+        position_price = wallet["free"] * POSITION_LEVERAGE
 
-        if position_price < MINIMUM_OPENABLE_POSITION_PRICE:
+        if position_price < MINIMUM_POSITION_PRICE:
             logging.info(f"Market:{pair}, Can't open a position :/. Wallet USD collateral low")
             return False  # Funds are not sufficient
 
