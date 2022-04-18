@@ -115,6 +115,7 @@ class MultiCoinAbnormalVolumeTracker(Strategy):
 
         # This indicator will help to not trigger too many coin position openings when the whole market is pumping
         self.compute_all_market_volume_indicator()
+        logging.info(f"Overall market volume indicator = {self.current_market_volume_indicator}")
 
         logging.info("Scanning markets ...")
 
@@ -173,12 +174,13 @@ class MultiCoinAbnormalVolumeTracker(Strategy):
             sma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-SHORT_MA_VOLUME_DEPTH:]])
             sma_avg_volume = sma_sum_volume / SHORT_MA_VOLUME_DEPTH
 
-            if lma_avg_volume > 0:
+            # Don't consider coins without sma avg volume as well
+            if lma_avg_volume > 0 and sma_avg_volume > 0:
                 all_pairs_volume_factor_sum += sma_avg_volume / lma_avg_volume
                 all_pairs_number += 1
 
-        self.current_market_volume_indicator = all_pairs_volume_factor_sum / all_pairs_number if all_pairs_number != 0 \
-            else 1
+        self.current_market_volume_indicator = round(all_pairs_volume_factor_sum / all_pairs_number, 2) \
+            if all_pairs_number != 0 else 1
 
     def decide(self, pair: str) -> bool:
         """
@@ -233,8 +235,9 @@ class MultiCoinAbnormalVolumeTracker(Strategy):
         sma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-SHORT_MA_VOLUME_DEPTH:]])
         sma_avg_volume = sma_sum_volume / SHORT_MA_VOLUME_DEPTH
 
-        # Increase or decrease VOLUME_CHECK_FACTOR_SIZE applied value using current_market_indicator
-        applied_volume_factor = VOLUME_CHECK_FACTOR_SIZE * self.current_market_volume_indicator
+        # Increase VOLUME_CHECK_FACTOR_SIZE applied value using current_market_indicator (if indicator is more than 1)
+        applied_volume_factor = max(VOLUME_CHECK_FACTOR_SIZE,
+                                    VOLUME_CHECK_FACTOR_SIZE * self.current_market_volume_indicator)
 
         # If recent volume are not VOLUME_CHECK_FACTOR_SIZE time more than old volume
         if sma_avg_volume == 0 or sma_avg_volume / lma_avg_volume < applied_volume_factor:
