@@ -44,7 +44,7 @@ PAIRS_TO_TRACK = [
 TIME_TO_SLEEP_BETWEEN_TIMEFRAME_LAUNCH = 0.25  # Sleeping 250 ms will avoid errors with a reasonable tolerance
 
 LONG_MA_VOLUME_DEPTH = 100  # The number of candles to be used as volume comparison base
-SHORT_MA_VOLUME_DEPTH = 3  # The number of candles used to compare volumes on (must be < than LONG_MA_VOLUME_DEPTH)
+SHORT_MA_VOLUME_DEPTH = 4  # The number of candles used to compare volumes on (must be < than LONG_MA_VOLUME_DEPTH)
 
 # Factor by which the SHORT_MA_VOLUME_DEPTH volumes must be higher than LONG_MA_VOLUME_DEPTH volumes
 VOLUME_CHECK_FACTOR_SIZE = 16
@@ -54,8 +54,8 @@ MINIMUM_PRICE_VARIATION = 0.6  # Percentage of variation a coin must have during
 POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120  # When a position driver is running, check market every x sec
 POSITION_LEVERAGE = 0.2  # Position leverage to apply
 MINIMUM_POSITION_PRICE = 50  # Don't open a position for less than this amount
-TRAILING_STOP_PERCENTAGE = 8  # Trailing stop percentage
-STOP_LOSS_PERCENTAGE = 1.4  # Stop loss percentage
+TRAILING_STOP_PERCENTAGE = 5  # Trailing stop percentage
+STOP_LOSS_PERCENTAGE = 1  # Stop loss percentage
 POSITION_MAX_OPEN_DURATION = 4 * 60 * 60
 JAIL_DURATION = 60 * 60  # Time for wish a coin can't be re bought after a position is closed on it
 
