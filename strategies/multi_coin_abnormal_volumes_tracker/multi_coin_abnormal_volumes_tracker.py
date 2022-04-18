@@ -51,11 +51,11 @@ VOLUME_CHECK_FACTOR_SIZE = 16
 
 MINIMUM_AVERAGE_VOLUME = 15000  # Minimum average volume to pass validation (avoid unsellable coin)
 MINIMUM_PRICE_VARIATION = 0.6  # Percentage of variation a coin must have during its last SHORT_MA_VOLUME_DEPTH candles
-POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120  # When a position driver is running, check market every x sec
-POSITION_LEVERAGE = 0.2  # Position leverage to apply
-MINIMUM_POSITION_PRICE = 50  # Don't open a position for less than this amount
+POSITION_LEVERAGE = 0.2  # Position leverage to apply on each position
 TRAILING_STOP_PERCENTAGE = 5  # Trailing stop percentage
 STOP_LOSS_PERCENTAGE = 1  # Stop loss percentage
+
+POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120  # When a position driver is running, check market every x sec
 POSITION_MAX_OPEN_DURATION = 4 * 60 * 60
 JAIL_DURATION = 60 * 60  # Time for wish a coin can't be re bought after a position is closed on it
 
@@ -76,6 +76,11 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         self.pair_manager_list = {}  # { [pair]: pair_manager }
 
         self.total_invested = 0
+
+        # Compute all market volumes during the last SHORT_MA_VOLUME_DEPTH candles to apply a coefficient on
+        # VOLUME_CHECK_FACTOR_SIZE accordingly (the more the market is volume is pumping, the more it will be difficult
+        # to trigger VOLUME_CHECK_FACTOR_SIZE check
+        self.current_market_volume_indicator = 1
 
         i = 0
         for pair_to_track in PAIRS_TO_TRACK:
@@ -101,6 +106,11 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
     def loop(self) -> None:
         """The strategy core"""
+
+        logging.info("Compute overall market volume indicator ...")
+
+        # This indicator will help to not trigger too many coin position openings when the whole market is pumping
+        self.compute_all_market_volume_indicator()
 
         logging.info("Scanning markets ...")
 
@@ -134,6 +144,38 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
             logging.info(f"Stopping time frame acquisition on pair {i} of {len(PAIRS_TO_TRACK)}: {pair_to_track}")
             self.pair_manager_list[pair_to_track]["crypto_pair_manager"].stop_all_time_frame_acq()
 
+    def compute_all_market_volume_indicator(self):
+        """
+        Compute an indicator of how much the short ma on every coin volumes is more (indicator > 1)
+        or less (indicator < 1) than the long ma volumes
+        """
+        all_pairs_volume_factor_sum = 0
+        all_pairs_number = 0
+
+        # For each coin
+        for pair_to_track in PAIRS_TO_TRACK:
+            pair_manager: PairManagerDict = self.pair_manager_list[pair_to_track]
+            stock_data_manager = pair_manager["crypto_pair_manager"].get_time_frame(60).stock_data_manager
+
+            # Not enough data
+            if len(stock_data_manager.stock_data_list) < LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH:
+                continue
+
+            lma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[
+                                                    -(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH):
+                                                    -SHORT_MA_VOLUME_DEPTH]])
+            lma_avg_volume = lma_sum_volume / LONG_MA_VOLUME_DEPTH
+
+            sma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-SHORT_MA_VOLUME_DEPTH:]])
+            sma_avg_volume = sma_sum_volume / SHORT_MA_VOLUME_DEPTH
+
+            if lma_avg_volume > 0:
+                all_pairs_volume_factor_sum += sma_avg_volume / lma_avg_volume
+                all_pairs_number += 1
+
+        self.current_market_volume_indicator = all_pairs_volume_factor_sum / all_pairs_number if all_pairs_number != 0 \
+            else 1
+
     def decide(self, pair: str) -> bool:
         """
         Decide to open or not a position on a given pair
@@ -165,43 +207,46 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         if len(stock_data_manager.stock_data_list) < LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH:
             return False
 
-        # Check average LONG_MA_VOLUME_DEPTH (lma) candles volume is VOLUME_CHECK_FACTOR_SIZE times more
-        # than the average SHORT_MA_VOLUME_DEPTH (sma)
-        lma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[
-                                                -(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH)
-                                                :-SHORT_MA_VOLUME_DEPTH]])
-
         # Compute zero volumes candles number
         zero_volume_candles_number = sum(map(
             lambda x: x == 0,
-            [d.volume for d in stock_data_manager.stock_data_list[-(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH)
-                                                                  :-SHORT_MA_VOLUME_DEPTH]]
+            [d.volume for d in stock_data_manager.stock_data_list[-(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH):
+                                                                  -SHORT_MA_VOLUME_DEPTH]]
         ))
 
         # Too many zero volume candles
         if zero_volume_candles_number > LONG_MA_VOLUME_DEPTH / 3:
             return False  # Skip this coin
 
+        # Check average LONG_MA_VOLUME_DEPTH (lma) candles volume is VOLUME_CHECK_FACTOR_SIZE times more
+        # than the average SHORT_MA_VOLUME_DEPTH (sma)
+        lma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[
+                                                -(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH):
+                                                -SHORT_MA_VOLUME_DEPTH]])
+
         lma_avg_volume = lma_sum_volume / (LONG_MA_VOLUME_DEPTH - zero_volume_candles_number)
 
         sma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-SHORT_MA_VOLUME_DEPTH:]])
         sma_avg_volume = sma_sum_volume / SHORT_MA_VOLUME_DEPTH
 
+        # Increase or decrease VOLUME_CHECK_FACTOR_SIZE applied value using current_market_indicator
+        applied_volume_factor = VOLUME_CHECK_FACTOR_SIZE * self.current_market_volume_indicator
+
         # If recent volumes are not VOLUME_CHECK_FACTOR_SIZE time more than old volumes
-        if sma_avg_volume == 0 or lma_avg_volume == 0 or sma_avg_volume / lma_avg_volume < VOLUME_CHECK_FACTOR_SIZE:
-            # log volumes that are higher than half the required volumes
-            if lma_avg_volume != 0 and sma_avg_volume / lma_avg_volume > math.floor(VOLUME_CHECK_FACTOR_SIZE / 3):
+        if sma_avg_volume == 0 or sma_avg_volume / lma_avg_volume < applied_volume_factor:
+            # log volumes that are higher than 1/3 the required volumes
+            if lma_avg_volume != 0 and sma_avg_volume / lma_avg_volume > math.floor(applied_volume_factor / 3):
                 logging.info(f"Market:{pair}, volume factor check: "
                              f"{sma_avg_volume} / {lma_avg_volume} = {sma_avg_volume / lma_avg_volume}")
             return False  # Skip this coin
 
         logging.info(f"Market:{pair}, volume factor check passes ! "
-                     f"{sma_avg_volume} > {lma_avg_volume} * {VOLUME_CHECK_FACTOR_SIZE}")
+                     f"{sma_avg_volume} > {lma_avg_volume} * {applied_volume_factor}")
 
         individual_candle_volume_check = True
         for i in range(1, SHORT_MA_VOLUME_DEPTH + 1):
             individual_candle_volume_check = stock_data_manager.stock_data_list[-i].volume / lma_avg_volume \
-                                             > VOLUME_CHECK_FACTOR_SIZE
+                                             > applied_volume_factor
             if individual_candle_volume_check is False:
                 break
 
@@ -257,10 +302,6 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         logging.info(f"Market:{pair}, wallet: {str(wallet)}")
 
         position_price = wallet["free"] * POSITION_LEVERAGE
-
-        if position_price < MINIMUM_POSITION_PRICE:
-            logging.info(f"Market:{pair}, Can't open a position :/. Wallet USD collateral low")
-            return False  # Funds are not sufficient
 
         if position_price + self.total_invested > wallet["free"]:
             logging.info(f"Market:{pair}, Can't open a position :/. Opened positions would exceed wallet balance")
