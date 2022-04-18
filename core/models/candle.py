@@ -33,7 +33,7 @@ class Candle(IdentifiedCandle):
         :return: The color of the candle
         :rtype: ColorEnum
         """
-        return ColorEnum.GREEN if self.open_price < self.close_price else ColorEnum.RED
+        return ColorEnum.GREEN if self.open_price <= self.close_price else ColorEnum.RED
 
     def is_hammer_or_hanging_man(self) -> bool:
         """

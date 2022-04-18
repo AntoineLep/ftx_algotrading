@@ -2,6 +2,7 @@ import logging
 import math
 import time
 
+from core.enums.color_enum import ColorEnum
 from core.enums.order_type_enum import OrderTypeEnum
 from core.enums.position_state_enum import PositionStateEnum
 from core.enums.side_enum import SideEnum
@@ -44,9 +45,12 @@ PAIRS_TO_TRACK = [
 TIME_TO_SLEEP_BETWEEN_TIMEFRAME_LAUNCH = 0.25  # Sleeping 250 ms will avoid errors with a reasonable tolerance
 
 LONG_MA_VOLUME_DEPTH = 100  # The number of candles to be used as volume comparison base
-SHORT_MA_VOLUME_DEPTH = 4  # The number of candles used to compare volumes on (must be < than LONG_MA_VOLUME_DEPTH)
+SHORT_MA_VOLUME_DEPTH = 4  # The number of candles used to compare volume on (must be < than LONG_MA_VOLUME_DEPTH)
 
-# Factor by which the SHORT_MA_VOLUME_DEPTH volumes must be higher than LONG_MA_VOLUME_DEPTH volumes
+# There must be this ratio of green candle on the last SHORT_MA_VOLUME_DEPTH candles
+SHORT_MA_GREEN_CANDLE_DOMINANCE_MIN_RATIO = 0.75
+
+# Factor by which the SHORT_MA_VOLUME_DEPTH volume must be higher than LONG_MA_VOLUME_DEPTH volume
 VOLUME_CHECK_FACTOR_SIZE = 16
 
 MINIMUM_AVERAGE_VOLUME = 15000  # Minimum average volume to pass validation (avoid unsellable coin)
@@ -60,14 +64,14 @@ POSITION_MAX_OPEN_DURATION = 4 * 60 * 60
 JAIL_DURATION = 60 * 60  # Time for wish a coin can't be re bought after a position is closed on it
 
 
-class MultiCoinAbnormalVolumesTracker(Strategy):
-    """Multi coin abnormal volumes tracker"""
+class MultiCoinAbnormalVolumeTracker(Strategy):
+    """Multi coin abnormal volume tracker"""
 
     def __init__(self):
-        """The multi coin abnormal volumes tracker strategy constructor"""
+        """The multi coin abnormal volume tracker strategy constructor"""
 
-        logging.info("MultiCoinAbnormalVolumesTracker run strategy")
-        super(MultiCoinAbnormalVolumesTracker, self).__init__()
+        logging.info("MultiCoinAbnormalVolumeTracker run strategy")
+        super(MultiCoinAbnormalVolumeTracker, self).__init__()
 
         # Deactivate stock data log for readability purposes
         TimeFrameManager.log_received_stock_data = False
@@ -77,7 +81,7 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
         self.total_invested = 0
 
-        # Compute all market volumes during the last SHORT_MA_VOLUME_DEPTH candles to apply a coefficient on
+        # Compute all market volume during the last SHORT_MA_VOLUME_DEPTH candles to apply a coefficient on
         # VOLUME_CHECK_FACTOR_SIZE accordingly (the more the market is volume is pumping, the more it will be difficult
         # to trigger VOLUME_CHECK_FACTOR_SIZE check
         self.current_market_volume_indicator = 1
@@ -136,7 +140,7 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
     def cleanup(self) -> None:
         """Clean strategy execution"""
-        logging.info("MultiCoinAbnormalVolumesTracker cleanup")
+        logging.info("MultiCoinAbnormalVolumeTracker cleanup")
 
         i = 0
         for pair_to_track in PAIRS_TO_TRACK:
@@ -146,8 +150,8 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
 
     def compute_all_market_volume_indicator(self):
         """
-        Compute an indicator of how much the short ma on every coin volumes is more (indicator > 1)
-        or less (indicator < 1) than the long ma volumes
+        Compute an indicator of how much the short ma on every coin volume is more (indicator > 1)
+        or less (indicator < 1) than the long ma volume
         """
         all_pairs_volume_factor_sum = 0
         all_pairs_number = 0
@@ -207,7 +211,7 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         if len(stock_data_manager.stock_data_list) < LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH:
             return False
 
-        # Compute zero volumes candles number
+        # Compute zero volume candles number
         zero_volume_candles_number = sum(map(
             lambda x: x == 0,
             [d.volume for d in stock_data_manager.stock_data_list[-(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH):
@@ -232,7 +236,7 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         # Increase or decrease VOLUME_CHECK_FACTOR_SIZE applied value using current_market_indicator
         applied_volume_factor = VOLUME_CHECK_FACTOR_SIZE * self.current_market_volume_indicator
 
-        # If recent volumes are not VOLUME_CHECK_FACTOR_SIZE time more than old volumes
+        # If recent volume are not VOLUME_CHECK_FACTOR_SIZE time more than old volume
         if sma_avg_volume == 0 or sma_avg_volume / lma_avg_volume < applied_volume_factor:
             # log volumes that are higher than 1/3 the required volumes
             if lma_avg_volume != 0 and sma_avg_volume / lma_avg_volume > math.floor(applied_volume_factor / 3):
@@ -243,15 +247,22 @@ class MultiCoinAbnormalVolumesTracker(Strategy):
         logging.info(f"Market:{pair}, volume factor check passes ! "
                      f"{sma_avg_volume} > {lma_avg_volume} * {applied_volume_factor}")
 
-        individual_candle_volume_check = True
-        for i in range(1, SHORT_MA_VOLUME_DEPTH + 1):
-            individual_candle_volume_check = stock_data_manager.stock_data_list[-i].volume / lma_avg_volume \
-                                             > applied_volume_factor
-            if individual_candle_volume_check is False:
-                break
+        green_candles_number = 0
 
-        if individual_candle_volume_check is False:
-            logging.info(f"Market:{pair}, volume individual candle check fail !")
+        for i in range(1, SHORT_MA_VOLUME_DEPTH + 1):
+            # Count green candles within SHORT_MA_VOLUME_DEPTH last candles
+            if stock_data_manager.stock_data_list[-i].get_color() is ColorEnum.GREEN:
+                green_candles_number += 1
+
+            # Individual candle volume check
+            if stock_data_manager.stock_data_list[-i].volume / lma_avg_volume > applied_volume_factor is False:
+                logging.info(f"Market:{pair}, volume individual candle check fail !")
+                return False  # Skip this coin
+
+        if green_candles_number / SHORT_MA_VOLUME_DEPTH < SHORT_MA_GREEN_CANDLE_DOMINANCE_MIN_RATIO:
+            logging.info(f"Market:{pair}, green candle dominance check fail ! "
+                         f"{green_candles_number} green candle(s) is less than {SHORT_MA_VOLUME_DEPTH} * "
+                         f"{SHORT_MA_GREEN_CANDLE_DOMINANCE_MIN_RATIO}")
             return False  # Skip this coin
 
         # Check the volume are "good" (avoid unsellable coins)
