@@ -176,8 +176,14 @@ class MultiCoinAbnormalVolumeTracker(Strategy):
 
             # Don't consider coins without sma avg volume as well
             if lma_avg_volume > 0 and sma_avg_volume > 0:
-                all_pairs_volume_factor_sum += sma_avg_volume / lma_avg_volume
                 all_pairs_number += 1
+                # Avoid having too high or too low volume factor values by capping the factor between 0.5 and 4
+                if sma_avg_volume / lma_avg_volume < 0.5:
+                    all_pairs_volume_factor_sum += 0.5
+                elif sma_avg_volume / lma_avg_volume > 4:
+                    all_pairs_volume_factor_sum += 4
+                else:
+                    all_pairs_volume_factor_sum += sma_avg_volume / lma_avg_volume
 
         self.current_market_volume_indicator = round(all_pairs_volume_factor_sum / all_pairs_number, 2) \
             if all_pairs_number != 0 else 1

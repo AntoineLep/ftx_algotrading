@@ -1,18 +1,51 @@
-# ftx_algotrading
+# FTX Algotrading
 
-Simple algorithmic trading strategy runner for FTX
+[![Made With Python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![GitHub License](https://img.shields.io/github/license/AntoineLep/ftx_algotrading)](https://github.com/AntoineLep/ftx_algotrading/blob/main/LICENSE)
 
-## Configure
+FTX Algotrading is a simple algorithmic trading strategy runner for FTX.
 
-Open `config/` folder and fill the private directory with a new file called `ftx_config.py` with your ftx api key info.
-A template is given in this directory with some basic config info about ftx exchange and how to structure the
+The project aims to provide an environment and tools for developing automatic trading strategies. It comes with a 
+simple framework that can be used to automatically retrieve OHLC data within several timeframes, compute technical
+indicators and setup managed position on [FTX exchange](https://ftx.com/).
+
+This project comes with some [built-in strategies](https://github.com/AntoineLep/ftx_algotrading/tree/main/strategies).
+Don't hesitate to take a look at it to better understand how the project works.
+
+
+## Get started
+
+Open `config/` folder and fill the `private/` directory with a new file called `ftx_config.py` with your ftx api key
+info. A template is given in this directory with some basic config info about ftx exchange and how to structure the
 configuration file.
 
-Also don't forget to fill the `application_config.py` file with the main strategy you want to run.
+```python
+ws_endpoint = "wss://ftx.com/ws/"
+rest_endpoint = "https://ftx.com/api/"
+
+api = {
+    "key": "YOUR API KEY HERE",
+    "secret": "YOUR API SECRET HERE",
+    "sub_account": "YOUR SUB ACCOUNT NAME HERE"
+}
+```
+
+`config/application_config.py` allows configuring what strategy to run. It also permits setting up log path and level.
+
+
+```python
+from strategies.best_strat_ever.best_strategy_ever import BestStrategyEver
+
+strategy = BestStrategyEver()
+
+log = {
+    "level": "info",
+    "path": "logs"
+}
+```
 
 ## Trading strategies
-
-This project comes with some built-in strategies:
 
 ### twitter_elon_musk_doge_tracker
 
