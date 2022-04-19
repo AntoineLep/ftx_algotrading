@@ -89,7 +89,7 @@ setup with trigger orders for taking profit or stopping losses.
 ## Disclaimer
 
 I'm not responsible for any money losses using this bot and guarantee that it will not do anything else that what you
-ask him to do in your strategy. Existing strategies can be used at your own risk, please have a close look at the code
+ask him to do in your strategies. Existing strategies can be used at your own risk, please have a deep look at the code
 before running it.
 
 ## Credits

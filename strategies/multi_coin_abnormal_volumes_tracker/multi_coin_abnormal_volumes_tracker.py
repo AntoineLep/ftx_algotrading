@@ -57,7 +57,7 @@ MINIMUM_AVERAGE_VOLUME = 15000  # Minimum average volume to pass validation (avo
 MINIMUM_PRICE_VARIATION = 0.6  # Percentage of variation a coin must have during its last SHORT_MA_VOLUME_DEPTH candles
 POSITION_LEVERAGE = 0.2  # Position leverage to apply on each position
 TRAILING_STOP_PERCENTAGE = 5  # Trailing stop percentage
-STOP_LOSS_PERCENTAGE = 1  # Stop loss percentage
+STOP_LOSS_PERCENTAGE = 0.6  # Stop loss percentage
 
 POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120  # When a position driver is running, check market every x sec
 POSITION_MAX_OPEN_DURATION = 4 * 60 * 60
@@ -236,6 +236,7 @@ class MultiCoinAbnormalVolumeTracker(Strategy):
                                                 -(LONG_MA_VOLUME_DEPTH + SHORT_MA_VOLUME_DEPTH):
                                                 -SHORT_MA_VOLUME_DEPTH]])
 
+        # Don't consider zero volume candles
         lma_avg_volume = lma_sum_volume / (LONG_MA_VOLUME_DEPTH - zero_volume_candles_number)
 
         sma_sum_volume = sum([d.volume for d in stock_data_manager.stock_data_list[-SHORT_MA_VOLUME_DEPTH:]])
@@ -245,7 +246,7 @@ class MultiCoinAbnormalVolumeTracker(Strategy):
         applied_volume_factor = max(VOLUME_CHECK_FACTOR_SIZE,
                                     VOLUME_CHECK_FACTOR_SIZE * self.current_market_volume_indicator)
 
-        # If recent volume are not VOLUME_CHECK_FACTOR_SIZE time more than old volume
+        # If recent volume are not applied_volume_factor time more than older volume
         if sma_avg_volume == 0 or sma_avg_volume / lma_avg_volume < applied_volume_factor:
             # log volumes that are higher than 1/3 the required volumes
             if lma_avg_volume != 0 and sma_avg_volume / lma_avg_volume > math.floor(applied_volume_factor / 3):
@@ -258,14 +259,22 @@ class MultiCoinAbnormalVolumeTracker(Strategy):
 
         green_candles_number = 0
 
+        # Individual candle checks
         for i in range(1, SHORT_MA_VOLUME_DEPTH + 1):
-            # Count green candles within SHORT_MA_VOLUME_DEPTH last candles
+
+            # Count green candles
             if stock_data_manager.stock_data_list[-i].get_color() is ColorEnum.GREEN:
                 green_candles_number += 1
 
-            # Individual candle volume check
+            # Volume factor check
             if stock_data_manager.stock_data_list[-i].volume / lma_avg_volume > applied_volume_factor is False:
                 logging.info(f"Market:{pair}, volume individual candle check fail !")
+                return False  # Skip this coin
+
+            # Volume minimum value check
+            if stock_data_manager.stock_data_list[-i].volume < MINIMUM_AVERAGE_VOLUME:
+                logging.info(f"Market:{pair}, volume minimum value check fail ! "
+                             f"{stock_data_manager.stock_data_list[-i].volume} < {MINIMUM_AVERAGE_VOLUME}")
                 return False  # Skip this coin
 
         if green_candles_number / SHORT_MA_VOLUME_DEPTH < SHORT_MA_GREEN_CANDLE_DOMINANCE_MIN_RATIO:
@@ -274,13 +283,7 @@ class MultiCoinAbnormalVolumeTracker(Strategy):
                          f"{SHORT_MA_GREEN_CANDLE_DOMINANCE_MIN_RATIO}")
             return False  # Skip this coin
 
-        # Check the volume are "good" (avoid unsellable coins)
-        if sma_avg_volume < MINIMUM_AVERAGE_VOLUME:
-            logging.info(f"Market:{pair}, volume minimum value check fail ! "
-                         f"{sma_avg_volume} < {MINIMUM_AVERAGE_VOLUME}")
-            return False  # Skip this coin
-
-        logging.info(f"Market:{pair}, Volume minimum value check passes ! "
+        logging.info(f"Market:{pair}, Volume check passes ! "
                      f"{sma_avg_volume} >= {MINIMUM_AVERAGE_VOLUME}")
 
         # Check the price is up from at least MINIMUM_PRICE_VARIATION %
