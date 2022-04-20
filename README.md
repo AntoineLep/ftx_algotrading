@@ -100,7 +100,7 @@ class DemoStrategy(Strategy):
         logging.info("DemoStrategy cleanup")
 ```
 
-A strategy is structured around some key methods. It works this way:
+A strategy is structured around key methods. It works this way:
 
 `__init__` is called first, then the strategy runner will call indefinitely `before_loop`, `loop` and `after_loop`. When
 a blocking exception is raised or when the program is getting killed, `cleanup` is called.
@@ -181,7 +181,7 @@ class provide OHLCV values for each point in addition to some helpers that ident
 
 Let's continue to work on the DemoStrategy developed in the [Create a strategy](#create-a-strategy) section after we
 succeeded to [Launch stock data acquisition](#launch-stock-data-acquisition). We will now display some information about
-the last data point
+the last data points
 
 Add the following imports:
 
@@ -199,7 +199,21 @@ def loop(self) -> None:
     logging.info("DemoStrategy loop")
     
     stock_data_manager: StockDataManager = self.btc_pair_manager.get_time_frame(15).stock_data_manager
-    last_candle: Candle = stock_data_manager.stock_data_list[-1]
+    
+    # display last candle info
+    if len(stock_data_manager.stock_data_list) > 1:
+        last_candle: Candle = stock_data_manager.stock_data_list[-1]
+
+        logging.info(f"Last candle open price: {last_candle.open_price}")
+        logging.info(f"Last candle high price: {last_candle.high_price}")
+        logging.info(f"Last candle low price: {last_candle.low_price}")
+        logging.info(f"Last candle close price: {last_candle.close_price}")
+        logging.info(f"Last candle volume: {last_candle.volume}")
+
+    # display last 3 candles average volume
+    if len(stock_data_manager.stock_data_list) > 3:
+        last_3_candle_volumes = sum([d.volume for d in stock_data_manager.stock_data_list[-3:]])
+        logging.info(f"Last 3 candles average volume: {last_3_candle_volumes / 3}")
 ```
 
 ## Static configuration
