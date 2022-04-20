@@ -49,11 +49,11 @@ class Candle(IdentifiedCandle):
                 return True
         return False
 
-    def is_reversed_hammer_or_falling_star(self) -> bool:
+    def is_inverted_hammer_or_shooting_star(self) -> bool:
         """
-        Tells if the candle is a reversed hammer or a falling star or not
+        Tells if the candle is an inverted hammer or a shooting star or not
 
-        :return: True if the candle is a reversed hammer or a falling star, False otherwise
+        :return: True if the candle is a inverted hammer or a shooting star, False otherwise
         :rtype: bool
         """
         high_minus_low = (self.high_price - self.low_price)
@@ -62,31 +62,6 @@ class Candle(IdentifiedCandle):
             if highest_of_open_close - self.low_price < high_minus_low / 3:
                 return True
         return False
-
-    def is_a_swallowing(self, previous) -> bool:
-        """
-        Tells if thecandle is swallowing the previous candle
-
-        :param previous: The previous candle
-        :return: True if the candle is swallowing the previous candle, False otherwise
-        """
-        prev_highest_of_open_close = previous.open_price if previous.open_price > previous.close_price \
-            else previous.close_price
-        prev_lowest_of_open_close = previous.open_price if previous.open_price < previous.close_price \
-            else previous.close_price
-        highest_of_open_close = self.open_price if self.open_price > self.close_price else self.close_price
-        lowest_of_open_close = self.open_price if self.open_price < self.close_price else self.close_price
-
-        return prev_lowest_of_open_close < lowest_of_open_close < highest_of_open_close < prev_highest_of_open_close
-
-    def is_an_harami(self, previous) -> bool:
-        """
-        Tells if the candle is an harami or not
-
-        :param previous: The previous candle
-        :return: True if the candle is an harami, False otherwise
-        """
-        return previous.is_a_swallowing(self)
 
     def __str__(self):
         return "{identifier: %d, " \

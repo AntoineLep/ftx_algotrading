@@ -18,10 +18,12 @@ if __name__ == '__main__':
     logging.info("%s V%s" % (project_name, project_version))
     logging.info("---------------")
 
+    strategy = application_config.strategy
+
     try:
-        strategy = application_config.strategy
         strategy.run()
     except KeyboardInterrupt:
+        strategy.cleanup()
         logging.info("/!\\ Keyboard interruption: Stopping %s V%s" % (project_name,
                                                                       project_version))
     finally:
