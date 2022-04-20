@@ -13,6 +13,24 @@ indicators and setup managed position on [FTX exchange](https://ftx.com/).
 This project comes with some [built-in strategies](https://github.com/AntoineLep/ftx_algotrading/tree/main/strategies).
 Don't hesitate to take a look at it to better understand how the project works.
 
+## Table of contents
+
+- [Get started](#get-started)
+- [Documentation](#documentation)
+  - [Create a strategy](#create-a-strategy)
+  - [Launch stock data acquisition](#launch-stock-data-acquisition)
+  - [Retrieve and manipulate acquired data](#retrieve-and-manipulate-acquired-data)
+  - [Technical indicators](#technical-indicators)
+  - [Position driver](#position-driver)
+  - [Static configuration](#static-configuration)
+    - [Display / hide data acquisition logs](#display--hide-data-acquisition-logs)
+    - [Disable / enable automatically computed technical indicators](#disable--enable-automatically-computed-technical-indicators)
+- [Strategies](#strategies)
+  - [Existing strategies](#existing-strategies)
+  - [Create your own](#create-your-own)
+- [Disclaimer](#disclaimer)
+- [Credits](#credits)
+
 
 ## Get started
 
@@ -123,7 +141,7 @@ instance, a trading pair (`BTC-PERP` for example), and the different timeframes 
 
 Timeframes are expressed in seconds and supported values are: [15, 60, 300, 900, 3600, 14400, 86400]
 
-You can launch as many data acquisition as you want on several coins as long as it doesn't exceed
+You can launch as many data acquisitions as you want on several coins as long as it doesn't exceed
 [FTX API rate limits](https://help.ftx.com/hc/en-us/articles/360052595091-Ratelimits-on-FTX) 
 
 Let's add some logic to the DemoStrategy developed in the [Create a strategy](#create-a-strategy) section to launch
@@ -209,6 +227,7 @@ def loop(self) -> None:
         logging.info(f"Last candle low price: {last_candle.low_price}")
         logging.info(f"Last candle close price: {last_candle.close_price}")
         logging.info(f"Last candle volume: {last_candle.volume}")
+        logging.info(f"Last candle is a hammer or a hanging man: {last_candle.is_hammer_or_hanging_man()}")
 
     # display last 3 candles average volume
     if len(stock_data_manager.stock_data_list) > 3:
@@ -216,9 +235,47 @@ def loop(self) -> None:
         logging.info(f"Last 3 candles average volume: {last_3_candle_volumes / 3}")
 ```
 
-## Static configuration
+### Technical indicators
 
-### Display / hide data acquisition logs
+Technical indicators are automatically computed after each data acquisition (See 
+[Disable / enable automatically computed technical indicators](#disable--enable-automatically-computed-technical-indicators)
+if needed).
+We use
+[stockstats](https://pypi.org/project/stockstats/0.4.1/) library that supply a wrapper StockDataFrame for 
+pandas.DataFrame with inline stock statistics/indicators support. 
+
+There are plenty of indicators supported, the documentation is clear, and the library is quite easy to handle. Here is a
+basic example of how to update the demo strategy to display the last RSI (Relative Strength Index) values:
+
+Add the following import:
+
+```python
+import stockstats
+```
+
+In the `loop` method, add read RSI stockstats values:
+
+```python
+stock_data_manager: StockDataManager = self.btc_pair_manager.get_time_frame(15).stock_data_manager
+
+# Use stockstats to display RSI_14 indicator values
+indicators_dataframe: stockstats.StockDataFrame = stock_data_manager.stock_indicators
+if indicators_dataframe is not None:
+    logging.info(indicators_dataframe['rsi'])
+```
+
+### Position driver
+
+> Full doc coming very soon
+
+You can use the PositionDriver class to run position with automated management. It allows creating simple position
+opening setup with trigger orders for taking profit or stopping losses.
+
+![image](https://user-images.githubusercontent.com/6230724/119690499-0a9f4700-be4a-11eb-92f7-7259a13eedc2.png)
+
+### Static configuration
+
+#### Display / hide data acquisition logs
 
 When you have a lot of data to acquire, it can be better to not display logs since there are not necessarily relevant.
 Default value for this configuration is `True`.
@@ -230,7 +287,7 @@ from core.stock.time_frame_manager import TimeFrameManager
 TimeFrameManager.log_received_stock_data = False
 ````
 
-### Disable / enable automatically computed technical indicators
+#### Disable / enable automatically computed technical indicators
 
 When a timeframe is running and acquiring data, the default behaviour is to compute and refresh a bunch of technical 
 indicators on each candle retrieved. If this is not needed, this behaviour can be disabled for performance purposes.
@@ -248,44 +305,23 @@ btc_pair_manager.add_time_frame(15, False)
 btc_pair_manager.start_all_time_frame_acq()
 ```
 
-### twitter_elon_musk_doge_tracker
+## Strategies
 
-A strategy to automates DOGE-PERP position opening when Elon Musk tweets some Doge related content.
+### Existing strategies
 
-It has some internal configuration using globals to set up position open and close conditions. This strategy has an
-internal `config/private/twitter_config.py` file that has to be created before being able to run it. As
-for `ftx_config.py`, it comes with a template.
-
-> :warning: Make sure to use x20 leverage on your sub account before using this strategy (account > settings > margin)
-
-### listing_sniper
-
-A strategy to snipe a given pair listing.
-It has some internal configuration using globals to configure which amount to invest and to set up the market pair to 
-snipe
-
-### multi coin abnormal volume tracker
-
-A strategy that scan a list of pairs in order to find abnormal volume increase.
-For each listed coins, the strategy will compute a moving average of the last candles volume to compare it with a
-bigger segment of candles.
-
-It has some internal configuration using globals to configure volume check (factor, short ma, long ma), price variation,
-open and close conditions, and some other stuff documented inside strategy file.
-
-### best_strategy_ever
-
-A basic strategy for testing purposes
+| Name                                                                                                                                                                                | Purpose                                                                                                                                                                                                                                                                                                                                                                        |
+|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [twitter_elon_musk_doge_tracker](https://github.com/AntoineLep/ftx_algotrading/blob/main/strategies/twitter_elon_musk_doge_tracker/twitter_elon_musk_doge_tracker.py)               | Track abnormal `DOGE-PERP` volume increase when Elon Musk tweet something. This strategy has an internal `config/private/twitter_config.py` file that has to be created before being able to run it. As for `ftx_config.py`, it comes with a template. Make sure to use x20 leverage on your sub account before using this strategy (account > settings > margin) |
+| [listing_sniper](https://github.com/AntoineLep/ftx_algotrading/blob/main/strategies/listing_sniper/listing_sniper.py)                                                               | A strategy to snipe a given pair listing by brute forcing a buy position on it until it passes.                                                                                                                                                                                                                                                                                |
+| [multi_coin_abnormal_volume_tracker](https://github.com/AntoineLep/ftx_algotrading/blob/main/strategies/multi_coin_abnormal_volumes_tracker/multi_coin_abnormal_volumes_tracker.py) | A strategy that scan a list of pairs in order to find abnormal volume increase. For each listed coins, the strategy will compute a moving average of the last candles volume to compare it with a bigger segment of candles.                                                                                                                                                   |
+| [trend_follow](https://github.com/AntoineLep/ftx_algotrading/blob/main/strategies/trend_follow/trend_follow.py)                                                                     | A strategy that follow a coin trend by going long when a coin price is going up, and going short when the price is going down                                                                                                                                                                                                                                                  |
+| [best_strat_ever](https://github.com/AntoineLep/ftx_algotrading/blob/main/strategies/best_strat_ever/best_strategy_ever.py)                                                         | A basic strategy for testing purposes                                                                                                                                                                                                                                                                                                                                          |
+| [demo_strategy](https://github.com/AntoineLep/ftx_algotrading/blob/main/strategies/demo_strategy/demo_strategy.py)                                                                  | A basic strategy for demo purposes                                                                                                                                                                                                                                                                                                                                             |
 
 ### Create your own
 
-Feel free to create your own strategy in the strategy folder or reuse the existing ones. You can use ftx api examples to
+Feel free to create your own strategy in the strategy folder or reuse the existing ones. You can use FTX API examples to
 send trading orders. See [FTX official documentation](https://docs.ftx.com/).
-
-You can use the PositionDriver class as well to run position with more ease. It allows creating simple position opening
-setup with trigger orders for taking profit or stopping losses.
-
-![image](https://user-images.githubusercontent.com/6230724/119690499-0a9f4700-be4a-11eb-92f7-7259a13eedc2.png)
 
 ## Disclaimer
 
@@ -295,9 +331,8 @@ before running it.
 
 ## Credits
 
-If you're making too much money out of this trading bot and feel like you have to give me back some love, do not
-hesitate to give your feedback or to share some of your profit at my ETH address:
-`0xb27daa27010fc68A69b6361CCAECCE14aBEea4A8`
+If you like this tool or if you're making too much money out of it, don't hesitate to give your feedback. You can share
+some of your profit at my Ethereum address as well: `0xb27daa27010fc68A69b6361CCAECCE14aBEea4A8`
 
 Issues and PR are welcome
 

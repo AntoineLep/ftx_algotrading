@@ -1,6 +1,8 @@
 import logging
 import time
 
+import stockstats
+
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.models.candle import Candle
 from core.stock.crypto_pair_manager import CryptoPairManager
@@ -42,11 +44,17 @@ class DemoStrategy(Strategy):
             logging.info(f"Last candle low price: {last_candle.low_price}")
             logging.info(f"Last candle close price: {last_candle.close_price}")
             logging.info(f"Last candle volume: {last_candle.volume}")
+            logging.info(f"Last candle is a hammer or a hanging man: {last_candle.is_hammer_or_hanging_man()}")
 
         # display last 3 candles average volume
         if len(stock_data_manager.stock_data_list) > 3:
             last_3_candle_volumes = sum([d.volume for d in stock_data_manager.stock_data_list[-3:]])
             logging.info(f"Last 3 candles average volume: {last_3_candle_volumes / 3}")
+
+        # Use stockstats to display RSI_14 indicator values
+        indicators_dataframe: stockstats.StockDataFrame = stock_data_manager.stock_indicators
+        if indicators_dataframe is not None:
+            logging.info(indicators_dataframe['rsi'])
 
     def after_loop(self) -> None:
         """Called after each loop"""

@@ -16,7 +16,7 @@ from core.stock.crypto_pair_manager import CryptoPairManager
 from core.stock.time_frame_manager import TimeFrameManager
 from core.strategy.strategy import Strategy
 from core.trading.position_driver import PositionDriver
-from strategies.multi_coin_abnormal_volumes_tracker.models.pair_manager_dict import PairManagerDict
+from strategies.multi_coin_abnormal_volume_tracker.models.pair_manager_dict import PairManagerDict
 from tools.utils import format_wallet_raw_data, format_market_raw_data
 
 PAIRS_TO_TRACK = [
@@ -51,7 +51,7 @@ SHORT_MA_VOLUME_DEPTH = 4  # The number of candles used to compare volume on (mu
 SHORT_MA_GREEN_CANDLE_DOMINANCE_MIN_RATIO = 0.75
 
 # Factor by which the SHORT_MA_VOLUME_DEPTH volume must be higher than LONG_MA_VOLUME_DEPTH volume
-VOLUME_CHECK_FACTOR_SIZE = 16
+VOLUME_CHECK_FACTOR_SIZE = 15
 
 MINIMUM_AVERAGE_VOLUME = 15000  # Minimum average volume to pass validation (avoid unsellable coin)
 MINIMUM_PRICE_VARIATION = 0.6  # Percentage of variation a coin must have during its last SHORT_MA_VOLUME_DEPTH candles
