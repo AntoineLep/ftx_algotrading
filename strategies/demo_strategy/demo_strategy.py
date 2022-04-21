@@ -35,7 +35,7 @@ class DemoStrategy(Strategy):
 
         stock_data_manager: StockDataManager = self.btc_pair_manager.get_time_frame(15).stock_data_manager
 
-        # display last candle info
+        # Display last candle info
         if len(stock_data_manager.stock_data_list) > 1:
             last_candle: Candle = stock_data_manager.stock_data_list[-1]
 
@@ -46,7 +46,7 @@ class DemoStrategy(Strategy):
             logging.info(f"Last candle volume: {last_candle.volume}")
             logging.info(f"Last candle is a hammer or a hanging man: {last_candle.is_hammer_or_hanging_man()}")
 
-        # display last 3 candles average volume
+        # Display last 3 candles average volume
         if len(stock_data_manager.stock_data_list) > 3:
             last_3_candle_volumes = sum([d.volume for d in stock_data_manager.stock_data_list[-3:]])
             logging.info(f"Last 3 candles average volume: {last_3_candle_volumes / 3}")

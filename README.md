@@ -22,6 +22,7 @@ Don't hesitate to take a look at it to better understand how the project works.
   - [Retrieve and manipulate acquired data](#retrieve-and-manipulate-acquired-data)
   - [Technical indicators](#technical-indicators)
   - [Position driver](#position-driver)
+  - [FTX Api](#ftx-api)
   - [Static configuration](#static-configuration)
     - [Display / hide data acquisition logs](#display--hide-data-acquisition-logs)
     - [Disable / enable automatically computed technical indicators](#disable--enable-automatically-computed-technical-indicators)
@@ -69,14 +70,14 @@ log = {
 
 Strategies are stored into `strategies/` folder.
 
-Let's create a demo_strategy to illustrate this documentation:
+Let's create a `demo_strategy` to illustrate this documentation:
 
 - Create a `strategies/demo_strategy` folder
 - Create the strategy file `strategies/demo_strategy/demo_strategy.py`
 
 All strategies must extend the
 [Strategy](https://github.com/AntoineLep/ftx_algotrading/blob/main/core/strategy/strategy.py)
-class. Here is a minimum working strategy:
+class. Here is a minimum working strategy code:
 
 ```python
 import logging
@@ -118,10 +119,10 @@ class DemoStrategy(Strategy):
         logging.info("DemoStrategy cleanup")
 ```
 
-A strategy is structured around key methods. It works this way:
+A strategy is structured around 5 key methods. It works this way:
 
-`__init__` is called first, then the strategy runner will call indefinitely `before_loop`, `loop` and `after_loop`. When
-a blocking exception is raised or when the program is getting killed, `cleanup` is called.
+`__init__` is called first as it's the class constructor, then the strategy runner will call indefinitely `before_loop`,
+`loop` and `after_loop`. When a blocking exception is raised or when the program is getting killed, `cleanup` is called.
 
 - `__init__` contains your strategy initialization logics. You can set up FTX data acquisition, initialize vars or
   whatever
@@ -130,12 +131,12 @@ a blocking exception is raised or when the program is getting killed, `cleanup` 
   checks, wallet balance recovery, decide to open or not a position and drive opened position for example are logics to
   be put into this method
 - `after_loop` is called after each strategy loop. You can use it to clean anything you used in the loop core method and
-  to make you strategy sleep a bit before the next loop
+  to make your strategy sleep a bit before the next loop
 - `cleanup` contains your strategy cleanup logics. You can delete file, close position or whatever
 
 ### Launch stock data acquisition
 
-In order to launch data acquisition, you will need a
+In order to launch stock data acquisition, you will need a
 [FtxRestApi](https://github.com/AntoineLep/ftx_algotrading/blob/main/core/ftx/rest/ftx_rest_api.py)
 instance, a trading pair (`BTC-PERP` for example), and the different timeframes you want to retrieve data on.
 
@@ -144,7 +145,7 @@ Timeframes are expressed in seconds and supported values are: [15, 60, 300, 900,
 You can launch as many data acquisitions as you want on several coins as long as it doesn't exceed
 [FTX API rate limits](https://help.ftx.com/hc/en-us/articles/360052595091-Ratelimits-on-FTX) 
 
-Let's add some logic to the DemoStrategy developed in the [Create a strategy](#create-a-strategy) section to launch
+Let's add some logic to the `demo_strategy` developed in the [Create a strategy](#create-a-strategy) section to launch
 background data acquisition for `BTC-PERP` on 15 sec and 60 sec timeframes:
 
 Add the following imports:
@@ -197,9 +198,9 @@ class provide OHLCV values for each point in addition to some helpers that ident
 [inverted hammer](https://candlecharts.com/candlestick-patterns/inverted-hammer-pattern/) or
 [shooting star](https://candlecharts.com/candlestick-patterns/shooting-star-pattern/).
 
-Let's continue to work on the DemoStrategy developed in the [Create a strategy](#create-a-strategy) section after we
+Let's continue to work on the `demo_strategy` developed in the [Create a strategy](#create-a-strategy) section after we
 succeeded to [Launch stock data acquisition](#launch-stock-data-acquisition). We will now display some information about
-the last data points
+the last data points.
 
 Add the following imports:
 
@@ -208,7 +209,7 @@ from core.stock.stock_data_manager import StockDataManager
 from core.models.candle import Candle
 ```
 
-In the `loop` method, read last data point:
+In the `loop` method, read last data point and display last 3 data points average volume:
 
 ```python
 def loop(self) -> None:
@@ -218,7 +219,7 @@ def loop(self) -> None:
     
     stock_data_manager: StockDataManager = self.btc_pair_manager.get_time_frame(15).stock_data_manager
     
-    # display last candle info
+    # Display last candle info
     if len(stock_data_manager.stock_data_list) > 1:
         last_candle: Candle = stock_data_manager.stock_data_list[-1]
 
@@ -229,7 +230,7 @@ def loop(self) -> None:
         logging.info(f"Last candle volume: {last_candle.volume}")
         logging.info(f"Last candle is a hammer or a hanging man: {last_candle.is_hammer_or_hanging_man()}")
 
-    # display last 3 candles average volume
+    # Display last 3 candles average volume
     if len(stock_data_manager.stock_data_list) > 3:
         last_3_candle_volumes = sum([d.volume for d in stock_data_manager.stock_data_list[-3:]])
         logging.info(f"Last 3 candles average volume: {last_3_candle_volumes / 3}")
@@ -245,7 +246,7 @@ We use
 pandas.DataFrame with inline stock statistics/indicators support. 
 
 There are plenty of indicators supported, the documentation is clear, and the library is quite easy to handle. Here is a
-basic example of how to update the demo strategy to display the last RSI (Relative Strength Index) values:
+basic example of how to update the `demo_strategy` to display the last RSI (Relative Strength Index) values:
 
 Add the following import:
 
@@ -253,7 +254,7 @@ Add the following import:
 import stockstats
 ```
 
-In the `loop` method, add read RSI stockstats values:
+In the `loop` method, add this code to read RSI stockstats values:
 
 ```python
 stock_data_manager: StockDataManager = self.btc_pair_manager.get_time_frame(15).stock_data_manager
@@ -272,6 +273,8 @@ You can use the PositionDriver class to run position with automated management. 
 opening setup with trigger orders for taking profit or stopping losses.
 
 ![image](https://user-images.githubusercontent.com/6230724/119690499-0a9f4700-be4a-11eb-92f7-7259a13eedc2.png)
+
+### FTX Api
 
 ### Static configuration
 
