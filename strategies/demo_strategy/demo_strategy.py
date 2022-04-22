@@ -56,6 +56,21 @@ class DemoStrategy(Strategy):
         if indicators_dataframe is not None:
             logging.info(indicators_dataframe['rsi'])
 
+        # -------------
+        # FTX API Calls
+
+        # Get last market data
+        response = self.ftx_rest_api.get(f"markets/BTC-PERP")
+        logging.info(f"FTX API response: {str(response)}")
+
+        # Get open orders on a given market
+        response = self.ftx_rest_api.get("orders", {"market": "BTC-PERP"})
+        logging.info(f"FTX API response: {str(response)}")
+
+        # Get your account wallet balances
+        response = self.ftx_rest_api.get("wallet/balances")
+        logging.info(f"FTX API response: {str(response)}")
+
     def after_loop(self) -> None:
         """Called after each loop"""
         logging.info("DemoStrategy after_loop")

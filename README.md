@@ -285,11 +285,6 @@ ftx_rest_api: FtxRestApi = FtxRestApi()
 Then you can use the FtxRestApi instance to retrieve information from FTX Api. See some examples:
 
 ```python
-
-# Retrieve market data
-logging.info("Retrieving market price")
-response = ftx_rest_api.get(f"markets/BTC-PERP")
-
 # Get last market data
 response = ftx_rest_api.get(f"markets/BTC-PERP")
 logging.info(f"FTX API response: {str(response)}")
