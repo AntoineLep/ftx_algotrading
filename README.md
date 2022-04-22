@@ -285,6 +285,8 @@ ftx_rest_api: FtxRestApi = FtxRestApi()
 Then you can use the FtxRestApi instance to retrieve information from FTX Api. See some examples:
 
 ```python
+from tools.utils import format_wallet_raw_data
+
 # Get last market data
 response = ftx_rest_api.get(f"markets/BTC-PERP")
 logging.info(f"FTX API response: {str(response)}")
@@ -297,6 +299,10 @@ logging.info(f"FTX API response: {str(response)}")
 response = ftx_rest_api.get("wallet/balances")
 logging.info(f"FTX API response: {str(response)}")
 
+# Display USD wallet info
+wallets = [format_wallet_raw_data(wallet) for wallet in response if
+           wallet["coin"] == 'USD']
+logging.info(f"FTX USD Wallet: {str(wallets)}")
 # ...
 ```
 

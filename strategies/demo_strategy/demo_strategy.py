@@ -8,6 +8,7 @@ from core.models.candle import Candle
 from core.stock.crypto_pair_manager import CryptoPairManager
 from core.stock.stock_data_manager import StockDataManager
 from core.strategy.strategy import Strategy
+from tools.utils import format_wallet_raw_data
 
 
 class DemoStrategy(Strategy):
@@ -70,6 +71,12 @@ class DemoStrategy(Strategy):
         # Get your account wallet balances
         response = self.ftx_rest_api.get("wallet/balances")
         logging.info(f"FTX API response: {str(response)}")
+
+        # Display USD wallet info
+        wallets = [format_wallet_raw_data(wallet) for wallet in response if
+                   wallet["coin"] == 'USD']
+        logging.info(f"FTX USD Wallet: {str(wallets)}")
+
 
     def after_loop(self) -> None:
         """Called after each loop"""
