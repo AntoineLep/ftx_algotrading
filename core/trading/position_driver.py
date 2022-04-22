@@ -23,7 +23,7 @@ class PositionDriver(object):
         Position driver constructor
 
         :param ftx_rest_api: Instance of FtxRestApi
-        :param worker_sleep_time_between_loops: Time to wait before looking for market again
+        :param worker_sleep_time_between_loops: Time to wait before looking for market and orders again
         """
         self.ftx_rest_api: FtxRestApi = ftx_rest_api
         self.market: str = ""
@@ -170,7 +170,7 @@ class PositionDriver(object):
                 response = self.ftx_rest_api.get("conditional_orders", {"market": self.market})
                 [logging.info(f"FTX API response: {str(resp)}") for resp in response]
             except Exception as e:
-                logging.error("An error occurred when cancelling orders:")
+                logging.error("An error occurred when Retrieving trigger orders:")
                 logging.error(e)
 
             try:
@@ -180,8 +180,7 @@ class PositionDriver(object):
                              position["future"].upper() == self.market.upper()]
 
                 if len(positions) == 1:
-                    position = positions[0]
-                    logging.info(f"FTX API response: {str(position)}")
+                    logging.info(f"FTX API response: {str(position[0])}")
 
             except Exception as e:
                 logging.error("An error occurred when retrieving position:")

@@ -13,6 +13,9 @@ indicators and setup managed position on [FTX exchange](https://ftx.com/).
 This project comes with some [built-in strategies](https://github.com/AntoineLep/ftx_algotrading/tree/main/strategies).
 Don't hesitate to take a look at it to better understand how the project works.
 
+![image](https://user-images.githubusercontent.com/6230724/119690499-0a9f4700-be4a-11eb-92f7-7259a13eedc2.png)
+
+
 ## Table of contents
 
 - [Get started](#get-started)
@@ -21,8 +24,8 @@ Don't hesitate to take a look at it to better understand how the project works.
   - [Launch stock data acquisition](#launch-stock-data-acquisition)
   - [Retrieve and manipulate acquired data](#retrieve-and-manipulate-acquired-data)
   - [Technical indicators](#technical-indicators)
-  - [Position driver](#position-driver)
   - [FTX Api](#ftx-api)
+  - [Position driver](#position-driver)
   - [Static configuration](#static-configuration)
     - [Display / hide data acquisition logs](#display--hide-data-acquisition-logs)
     - [Disable / enable automatically computed technical indicators](#disable--enable-automatically-computed-technical-indicators)
@@ -265,16 +268,150 @@ if indicators_dataframe is not None:
     logging.info(indicators_dataframe['rsi'])
 ```
 
+### FTX Api
+
+The [FtxRestApi](https://github.com/AntoineLep/ftx_algotrading/blob/main/core/ftx/rest/ftx_rest_api.py) class allows
+interfacing to the FTX Api directly. For full detail on what you can do with FTX REST Api, see 
+[FTX REST Api documentation](https://docs.ftx.com/#rest-api).
+
+First step is to create an FtxRestApi instance:
+
+```python
+from core.ftx.rest.ftx_rest_api import FtxRestApi
+
+ftx_rest_api: FtxRestApi = FtxRestApi()
+```
+
+Then you can use the FtxRestApi instance to retrieve information from FTX Api. See some examples:
+
+```python
+
+# Retrieve market data
+logging.info("Retrieving market price")
+response = ftx_rest_api.get(f"markets/BTC-PERP")
+
+# Get last market data
+response = ftx_rest_api.get(f"markets/BTC-PERP")
+logging.info(f"FTX API response: {str(response)}")
+
+# Get open orders on a given market
+response = ftx_rest_api.get("orders", {"market": "BTC-PERP"})
+logging.info(f"FTX API response: {str(response)}")
+
+# Get your account wallet balances
+response = ftx_rest_api.get("wallet/balances")
+logging.info(f"FTX API response: {str(response)}")
+
+# ...
+```
+
+There are some other FTX use examples in the existing strategies, feel free to have a look at them or to dive into FTX
+documentation.
+
 ### Position driver
 
-> Full doc coming very soon
+PositionDriver class allows running a position with automated management. It allows creating simple position opening
+setup with trigger orders for taking profit or stopping losses.
 
-You can use the PositionDriver class to run position with automated management. It allows creating simple position
-opening setup with trigger orders for taking profit or stopping losses.
+In order to use it in your strategy, add the following import:
 
-![image](https://user-images.githubusercontent.com/6230724/119690499-0a9f4700-be4a-11eb-92f7-7259a13eedc2.png)
+Let's open the following position:
+- Market buy 0.001 `BTC-PERP`
+- Stop loss 100% of the position size at -1% of the current price
+- Take profit 50% of the position size at +3% of the current price
+- Take profit the other 50% of the position size at +6% of the current price
+- Add a trailing stop for 100% of the position size at -2% of the current price
 
-### FTX Api
+```python
+from core.models.opening_config_dict import OpeningConfigDict
+from core.enums.order_type_enum import OrderTypeEnum
+from core.models.position_config_dict import PositionConfigDict
+from core.models.trigger_order_config_dict import TriggerOrderConfigDict
+from core.enums.side_enum import SideEnum
+from core.enums.trigger_order_type_enum import TriggerOrderTypeEnum
+from core.models.market_data_dict import MarketDataDict
+from tools.utils import format_market_raw_data
+from core.trading.position_driver import PositionDriver
+from typing import List
+
+# Retrieve market data
+logging.info("Retrieving market price")
+response = ftx_rest_api.get(f"markets/BTC-PERP")
+market_data: MarketDataDict = format_market_raw_data(response)
+
+openings: List[OpeningConfigDict] = [{
+    "price": None,
+    "size": 0.001,
+    "type": OrderTypeEnum.MARKET
+}]
+
+sl: TriggerOrderConfigDict = {
+    "size": 0.001,
+    "type": TriggerOrderTypeEnum.STOP,
+    "reduce_only": True,
+    "trigger_price": market_data["ask"] - market_data["ask"] * 1 / 100,
+    "order_price": None,
+    "trail_value": None
+}
+
+tp1: TriggerOrderConfigDict = {
+    "size": 0.0005,
+    "type": TriggerOrderTypeEnum.TAKE_PROFIT,
+    "reduce_only": True,
+    "trigger_price": market_data["ask"] + market_data["ask"] * 3 / 100,
+    "order_price": None,
+    "trail_value": None
+}
+
+tp2: TriggerOrderConfigDict = {
+    "size": 0.0005,
+    "type": TriggerOrderTypeEnum.TAKE_PROFIT,
+    "reduce_only": True,
+    "trigger_price": market_data["ask"] + market_data["ask"] * 6 / 100,
+    "order_price": None,
+    "trail_value": None
+}
+
+trailing_stop: TriggerOrderConfigDict = {
+    "size": 0.001,
+    "type": TriggerOrderTypeEnum.TRAILING_STOP,
+    "reduce_only": True,
+    "trigger_price": None,
+    "order_price": None,
+    "trail_value": market_data["ask"] * -2 / 100
+}
+
+position_config: PositionConfigDict = {
+    "openings": openings,
+    "trigger_orders": [sl, tp1, tp2, trailing_stop],
+    "max_open_duration": 60 * 60 * 4  # 4 hours
+}
+
+position_driver: PositionDriver = PositionDriver(ftx_rest_api)
+position_driver.open_position("DOGE-PERP", SideEnum.BUY, position_config)
+```
+
+Once a position is opened, the PositionDriver will check every 10 secs your existing position on FTX and update  its
+internal state automatically if the position is closed / liquidated. As order Api calls have a high impact in Ftx Api
+call rate limit, a 10 sec check can be a too high frequency. You can update this value when using the PositionDriver
+constructor:
+
+```python
+# Set PositionDriver check frequency to 120 sec
+position_driver: PositionDriver = PositionDriver(ftx_rest_api, 120)
+```
+
+> :warning: When opening a LIMIT order, the order may not be filled immediately. As a consequence, the trigger_orders
+> will be created all at once after the first PositionDriver check succeeding a successful opening. For finer / more
+> specific management, please use FTX Api directly.
+
+You can read the PositionDriver current state using the following code:
+```python
+from core.enums.position_state_enum import PositionStateEnum
+
+# Opened / not opened
+position_state: PositionStateEnum = position_driver.position_state
+```
 
 ### Static configuration
 

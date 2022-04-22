@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import time
+from typing import List
 
 from core.enums.order_type_enum import OrderTypeEnum
 from core.enums.position_state_enum import PositionStateEnum
@@ -9,6 +10,7 @@ from core.enums.side_enum import SideEnum
 from core.enums.trigger_order_type_enum import TriggerOrderTypeEnum
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.models.market_data_dict import MarketDataDict
+from core.models.opening_config_dict import OpeningConfigDict
 from core.models.position_config_dict import PositionConfigDict
 from core.models.trigger_order_config_dict import TriggerOrderConfigDict
 from core.models.wallet_dict import WalletDict
@@ -152,7 +154,7 @@ class TwitterElonMuskDogeTracker(Strategy):
                 market_data: MarketDataDict = format_market_raw_data(response)
                 position_size = math.floor(position_price / market_data["ask"])
 
-                openings = []
+                openings: List[OpeningConfigDict] = []
 
                 while position_price > 1:
                     sub_position_price = position_price if position_price < SUB_POSITION_MAX_PRICE \
