@@ -151,16 +151,12 @@ You can launch as many data acquisitions as you want on several coins as long as
 Let's add some logic to the `demo_strategy` developed in the [Create a strategy](#create-a-strategy) section to launch
 background data acquisition for `BTC-PERP` on 15 sec and 60 sec timeframes:
 
-Add the following imports:
+In the `__init__` method, launch data acquisition:
 
 ```python
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 from core.stock.crypto_pair_manager import CryptoPairManager
-```
 
-In the `__init__` method, launch data acquisition:
-
-```python
 def __init__(self):
     """The demo strategy constructor"""
     
@@ -205,16 +201,12 @@ Let's continue to work on the `demo_strategy` developed in the [Create a strateg
 succeeded to [Launch stock data acquisition](#launch-stock-data-acquisition). We will now display some information about
 the last data points.
 
-Add the following imports:
+In the `loop` method, read last data point and display last 3 data points average volume:
 
 ```python
 from core.stock.stock_data_manager import StockDataManager
 from core.models.candle import Candle
-```
 
-In the `loop` method, read last data point and display last 3 data points average volume:
-
-```python
 def loop(self) -> None:
     """The strategy core loop method"""
     
@@ -251,15 +243,11 @@ pandas.DataFrame with inline stock statistics/indicators support.
 There are plenty of indicators supported, the documentation is clear, and the library is quite easy to handle. Here is a
 basic example of how to update the `demo_strategy` to display the last RSI (Relative Strength Index) values:
 
-Add the following import:
-
-```python
-import stockstats
-```
-
 In the `loop` method, add this code to read RSI stockstats values:
 
 ```python
+import stockstats
+
 stock_data_manager: StockDataManager = self.btc_pair_manager.get_time_frame(15).stock_data_manager
 
 # Use stockstats to display RSI_14 indicator values
@@ -283,7 +271,7 @@ ftx_rest_api: FtxRestApi = FtxRestApi()
 ```
 
 Then you can use the FtxRestApi instance to retrieve information from FTX Api. See some examples:
-
+ 
 ```python
 from tools.utils import format_wallet_raw_data
 
@@ -313,8 +301,6 @@ documentation.
 
 PositionDriver class allows running a position with automated management. It allows creating simple position opening
 setup with trigger orders for taking profit or stopping losses.
-
-In order to use it in your strategy, add the following import:
 
 Let's open the following position:
 - Market buy 0.001 `BTC-PERP`

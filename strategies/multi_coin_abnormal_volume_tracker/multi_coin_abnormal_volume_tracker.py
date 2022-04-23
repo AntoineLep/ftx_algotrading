@@ -56,7 +56,7 @@ VOLUME_CHECK_FACTOR_SIZE = 15
 MINIMUM_AVERAGE_VOLUME = 15000  # Minimum average volume to pass validation (avoid unsellable coin)
 MINIMUM_PRICE_VARIATION = 0.6  # Percentage of variation a coin must have during its last SHORT_MA_VOLUME_DEPTH candles
 POSITION_LEVERAGE = 0.2  # Position leverage to apply on each position
-TRAILING_STOP_PERCENTAGE = 5  # Trailing stop percentage
+TRAILING_STOP_PERCENTAGE = 1.8  # Trailing stop percentage
 STOP_LOSS_PERCENTAGE = 0.6  # Stop loss percentage
 
 POSITION_DRIVER_WORKER_SLEEP_TIME_BETWEEN_LOOPS = 120  # When a position driver is running, check market every x sec
