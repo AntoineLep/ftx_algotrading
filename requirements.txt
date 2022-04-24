@@ -4,3 +4,5 @@ stockstats~=0.4.1
 websocket-client~=0.58.0
 gevent~=21.1.2
 python-dateutil~=2.8.1
+
+cryptofeed~=2.2.2

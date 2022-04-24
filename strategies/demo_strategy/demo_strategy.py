@@ -77,7 +77,6 @@ class DemoStrategy(Strategy):
                    wallet["coin"] == 'USD']
         logging.info(f"FTX USD Wallet: {str(wallets)}")
 
-
     def after_loop(self) -> None:
         """Called after each loop"""
         logging.info("DemoStrategy after_loop")
