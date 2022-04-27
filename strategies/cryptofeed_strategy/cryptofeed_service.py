@@ -1,63 +1,54 @@
 import asyncio
 import logging
 import queue
+from typing import List
 
 from cryptofeed import FeedHandler
-from cryptofeed.defines import LIQUIDATIONS
+from cryptofeed.defines import LIQUIDATIONS, OPEN_INTEREST
 from cryptofeed.exchanges import EXCHANGE_MAP
 
+from strategies.cryptofeed_strategy.enums.cryptofeed_data_type_enum import CryptofeedDataTypeEnum
+
 # Display all received data if set to true. Only the data > min_data_size is displayed otherwise
-DISPLAY_ALL_LIQUIDATION_DATA = True
+DISPLAY_ALL_DATA = False
+exchanges = ['BINANCE_FUTURES', 'FTX']
 
 
 class CryptofeedService(object):
-    LIQUIDATION_DATA: queue.Queue = queue.Queue()
+    data = {
+        CryptofeedDataTypeEnum.LIQUIDATIONS: queue.Queue(),
+        CryptofeedDataTypeEnum.OPEN_INTEREST: queue.Queue()
+    }
 
     @staticmethod
-    def flush_liquidation_data_queue_items(min_data_size: int = 0):
+    def flush_liquidation_data_queue_items(data_type: CryptofeedDataTypeEnum) -> List:
         """
-        Flush TestStrategy.LIQUIDATION_DATA queue and returns the data having a value >= min_data_size
+        Flush TestStrategy.LIQUIDATION_DATA queue and returns the data
 
-        :return: The data having a size >= min_data_size
+        :param data_type: The type of data to flush
+        :return: The liquidation data
         """
         items = []
 
-        while not CryptofeedService.LIQUIDATION_DATA.empty():
-            data = CryptofeedService.LIQUIDATION_DATA.get()
+        while not CryptofeedService.data[data_type].empty():
+            data = CryptofeedService.data[data_type].get()
 
-            if DISPLAY_ALL_LIQUIDATION_DATA:
+            if DISPLAY_ALL_DATA:
                 logging.info(data)
 
-            size = round(data.quantity * data.price, 2)
-
-            if size >= min_data_size:
-                end_c = '\033[0m'
-                side_c = '\033[91m' if data.side == 'sell' else '\33[32m'
-
-                size_c = ''
-
-                if size > 10_000:
-                    size_c = '\33[32m'
-                if size > 25_000:
-                    size_c = '\33[33m'
-                if size > 50_000:
-                    size_c = '\33[31m'
-                if size > 100_000:
-                    size_c = '\35[35m'
-
-                logging.info(f'{data.exchange:<18} {data.symbol:<18} Side: {side_c}{data.side:<8}{end_c} '
-                             f'Quantity: {data.quantity:<10} Price: {data.price:<10} '
-                             f'Size: {size_c}{size:<9}{end_c}')  # ID: {data.id} Status: {data.status}')
-
-                items.append(data)
+            items.append(data)
 
         return items
 
     @staticmethod
     def start_cryptofeed():
         async def liquidations(data, receipt):
-            # Add raw data to TestStrategy.LIQUIDATION_DATA queue
-            CryptofeedService.LIQUIDATION_DATA.put(data)
+            # Add raw data to CryptofeedDataTypeEnum.LIQUIDATION_DATA queue
+            CryptofeedService.data[CryptofeedDataTypeEnum.LIQUIDATIONS].put(data)
+
+        async def open_interest(data, receipt):
+            # Add raw data to CryptofeedDataTypeEnum.OPEN_INTEREST queue
+            CryptofeedService.data[CryptofeedDataTypeEnum.OPEN_INTEREST].put(data)
 
         # There is no current event loop in thread
         loop = asyncio.new_event_loop()
@@ -66,10 +57,6 @@ class CryptofeedService(object):
         f = FeedHandler()
         configured = []
 
-        # ['BINANCE_DELIVERY', 'BINANCE_FUTURES', 'BITMEX', 'BYBIT', 'DERIBIT', 'FTX']
-        exchanges = ['BINANCE_FUTURES', 'FTX']
-
-        # print(type(EXCHANGE_MAP), EXCHANGE_MAP)
         print("Querying exchange metadata")
         for exchange_string, exchange_class in EXCHANGE_MAP.items():
 
@@ -79,15 +66,15 @@ class CryptofeedService(object):
             if exchange_string in ['BITFLYER', 'EXX', 'OKEX']:  # We have issues with these exchanges
                 continue
 
-            if LIQUIDATIONS in exchange_class.info()['channels']['websocket']:
+            if all(channel in exchange_class.info()['channels']['websocket'] for channel in [LIQUIDATIONS,
+                                                                                             OPEN_INTEREST]):
                 configured.append(exchange_string)
                 print(f"Configuring {exchange_string}...", end='')
                 symbols = [sym for sym in exchange_class.symbols() if 'PINDEX' not in sym]
-                # symbols = ['LRC-USDT-PERP']
-                # print(symbols)
+
                 try:
-                    f.add_feed(exchange_class(subscription={LIQUIDATIONS: symbols},
-                                              callbacks={LIQUIDATIONS: liquidations}))
+                    f.add_feed(exchange_class(subscription={LIQUIDATIONS: symbols, OPEN_INTEREST: symbols},
+                                              callbacks={LIQUIDATIONS: liquidations, OPEN_INTEREST: open_interest}))
                     print(" Done")
                 except Exception as e:
                     print(e, exchange_string)

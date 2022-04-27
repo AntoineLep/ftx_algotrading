@@ -1,9 +1,12 @@
 import logging
 import threading
 import time
+from typing import List
 
 from core.strategy.strategy import Strategy
 from strategies.cryptofeed_strategy.cryptofeed_service import CryptofeedService
+from strategies.cryptofeed_strategy.enums.cryptofeed_data_type_enum import CryptofeedDataTypeEnum
+from strategies.cryptofeed_strategy.models.liquidation_data_dict import LiquidationDataDict
 from tools.utils import flatten
 
 SLEEP_TIME_BETWEEN_LOOPS = 10
@@ -19,8 +22,9 @@ class CryptofeedStrategy(Strategy):
         logging.info("TestStrategy run strategy")
         super(CryptofeedStrategy, self).__init__()
 
-        self.liquidations = []
-        self._t: threading.Thread = threading.Thread(target=CryptofeedService.start_cryptofeed)
+        self.liquidations: List[List[LiquidationDataDict]] = []
+        self.open_interest = {}
+        self._t: threading.Thread = threading.Thread(target=CryptofeedService.start_cryptofeed, args=[])
         self._t.start()
 
     def before_loop(self) -> None:
@@ -30,11 +34,8 @@ class CryptofeedStrategy(Strategy):
     def loop(self) -> None:
         """The strategy core loop method"""
 
-        # Flush liquidation data received into TestStrategy.LIQUIDATION_DATA queue
-        # Put in parameters the minimum value of the liquidation you want to retrieve
-        new_liquidations = CryptofeedService.flush_liquidation_data_queue_items(0)
-
-        self.liquidations.append(new_liquidations)
+        self.perform_new_liquidations()
+        self.perform_new_open_interest()
 
         last_1_min_liquidations = flatten(
             self.liquidations[-min(len(self.liquidations), 60 // SLEEP_TIME_BETWEEN_LOOPS):])
@@ -63,3 +64,48 @@ class CryptofeedStrategy(Strategy):
     def cleanup(self) -> None:
         """Clean strategy execution"""
         self._t.join()
+
+    def perform_new_liquidations(self) -> None:
+        """
+        Flush new received liquidations from cryptofeed service and add new data to the liquidation array
+        """
+        new_liquidations = CryptofeedService.flush_liquidation_data_queue_items(CryptofeedDataTypeEnum.LIQUIDATIONS)
+
+        for data in new_liquidations:
+            size = round(data.quantity * data.price, 2)
+
+            end_c = '\033[0m'
+            side_c = '\033[91m' if data.side == 'sell' else '\33[32m'
+
+            size_c = ''
+
+            if size > 10_000:
+                size_c = '\33[32m'
+            if size > 25_000:
+                size_c = '\33[33m'
+            if size > 50_000:
+                size_c = '\33[31m'
+            if size > 100_000:
+                size_c = '\35[35m'
+
+            logging.info(f'{data.exchange:<18} {data.symbol:<18} Side: {side_c}{data.side:<8}{end_c} '
+                         f'Quantity: {data.quantity:<10} Price: {data.price:<10} '
+                         f'Size: {size_c}{size:<9}{end_c}')  # ID: {data.id} Status: {data.status}')
+
+        self.liquidations.append(new_liquidations)
+
+    def perform_new_open_interest(self) -> None:
+        """
+        Flush new received open interest from cryptofeed service and add new data to the open interest object
+        """
+
+        new_oi = CryptofeedService.flush_liquidation_data_queue_items(CryptofeedDataTypeEnum.OPEN_INTEREST)
+
+        for oi in new_oi:
+            if oi.exchange not in self.open_interest:
+                self.open_interest[oi.exchange] = {}
+
+            self.open_interest[oi.exchange][oi.symbol] = {
+                "open_interest": oi.open_interest,
+                "timestamp": oi.timestamp
+            }
