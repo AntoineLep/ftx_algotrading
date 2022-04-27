@@ -22,8 +22,21 @@ class CryptofeedStrategy(Strategy):
         logging.info("TestStrategy run strategy")
         super(CryptofeedStrategy, self).__init__()
 
+        # Array of array of LiquidationDataDict, every sub array is the liquidation list received during the last
+        # SLEEP_TIME_BETWEEN_LOOPS sec. Use CryptofeedService EXCHANGES global to configure the list of exchange to
+        # retrieve data on
         self.liquidations: List[List[LiquidationDataDict]] = []
+
+        # {
+        #     exchange1: {
+        #         coin1: { open_interest: value, timestamp: value },
+        #         coin2: { open_interest: value, timestamp: value}
+        #     },
+        #     ...
+        # }
+        # Use CryptofeedService EXCHANGES global to configure the list of exchange to retrieve data on
         self.open_interest = {}
+
         self._t: threading.Thread = threading.Thread(target=CryptofeedService.start_cryptofeed, args=[])
         self._t.start()
 

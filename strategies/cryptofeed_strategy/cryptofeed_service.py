@@ -9,9 +9,9 @@ from cryptofeed.exchanges import EXCHANGE_MAP
 
 from strategies.cryptofeed_strategy.enums.cryptofeed_data_type_enum import CryptofeedDataTypeEnum
 
-# Display all received data if set to true. Only the data > min_data_size is displayed otherwise
+# Display all received data if set to true (verbose)
 DISPLAY_ALL_DATA = False
-exchanges = ['BINANCE_FUTURES', 'FTX']
+EXCHANGES = ['BINANCE_FUTURES', 'FTX']
 
 
 class CryptofeedService(object):
@@ -60,7 +60,7 @@ class CryptofeedService(object):
         print("Querying exchange metadata")
         for exchange_string, exchange_class in EXCHANGE_MAP.items():
 
-            if exchange_string not in exchanges:
+            if exchange_string not in EXCHANGES:
                 continue
 
             if exchange_string in ['BITFLYER', 'EXX', 'OKEX']:  # We have issues with these exchanges
