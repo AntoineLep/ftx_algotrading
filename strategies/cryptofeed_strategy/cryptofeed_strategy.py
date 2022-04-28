@@ -7,8 +7,8 @@ from core.strategy.strategy import Strategy
 from strategies.cryptofeed_strategy.cryptofeed_service import CryptofeedService
 from strategies.cryptofeed_strategy.enums.cryptofeed_data_type_enum import CryptofeedDataTypeEnum
 from strategies.cryptofeed_strategy.enums.cryptofeed_exchange_enum import CryptofeedExchangeEnum
-from strategies.cryptofeed_strategy.models.liquidation_data_dict import LiquidationDataDict
 from tools.utils import flatten
+from cryptofeed.types import Liquidation
 
 SLEEP_TIME_BETWEEN_LOOPS = 10
 LIQUIDATION_HISTORY_RETENTION_TIME = 60 * 60  # 1 hour retention
@@ -26,7 +26,7 @@ class CryptofeedStrategy(Strategy):
         # Array of array of LiquidationDataDict, every sub array is the liquidation list received during the last
         # SLEEP_TIME_BETWEEN_LOOPS sec. Use CryptofeedService EXCHANGES global to configure the list of exchange to
         # retrieve data on
-        self.liquidations: List[List[LiquidationDataDict]] = []
+        self.liquidations: List[List[Liquidation]] = []
 
         # {
         #     exchange1: {
@@ -58,26 +58,22 @@ class CryptofeedStrategy(Strategy):
 
         ftx_last_1_min_liquidations_value = sum([round(data.quantity * data.price, 2)
                                                  for data in last_1_min_liquidations
-                                                 if data.exchange == CryptofeedExchangeEnum.FTX])
+                                                 if data.exchange == "FTX"])
         ftx_last_5_min_liquidations_value = sum([round(data.quantity * data.price, 2)
                                                  for data in last_5_min_liquidations
-                                                 if data.exchange == CryptofeedExchangeEnum.FTX])
+                                                 if data.exchange == "FTX"])
 
         binance_last_1_min_liquidations_value = sum([round(data.quantity * data.price, 2)
                                                      for data in last_1_min_liquidations
-                                                     if data.exchange == CryptofeedExchangeEnum.BINANCE])
+                                                     if data.exchange == "BINANCE_FUTURES"])
         binance_last_5_min_liquidations_value = sum([round(data.quantity * data.price, 2)
                                                      for data in last_5_min_liquidations
-                                                     if data.exchange == CryptofeedExchangeEnum.BINANCE])
+                                                     if data.exchange == "BINANCE_FUTURES"])
 
-        logging.info(f'[FTX] Liquidations in the last 1 minute: {len(last_1_min_liquidations)} for a total value of '
-                     f'${ftx_last_1_min_liquidations_value}')
-        logging.info(f'[FTX] Liquidations in the last 5 minutes: {len(last_5_min_liquidations)} for a total value of '
-                     f'${ftx_last_5_min_liquidations_value}')
-        logging.info(f'[BINANCE] Liquidations in the last 1 minute: {len(last_1_min_liquidations)} for a total value of'
-                     f' ${binance_last_1_min_liquidations_value}')
-        logging.info(f'[BINANCE] Liquidations in the last 5 minutes: {len(last_5_min_liquidations)} for a total value of'
-                     f' ${binance_last_5_min_liquidations_value}')
+        logging.info(f'[FTX] Liquidations in the last 1 minute: ${ftx_last_1_min_liquidations_value}')
+        logging.info(f'[FTX] Liquidations in the last 5 minutes: ${ftx_last_5_min_liquidations_value}')
+        logging.info(f'[BINANCE] Liquidations in the last 1 minute: ${binance_last_1_min_liquidations_value}')
+        logging.info(f'[BINANCE] Liquidations in the last 5 minutes: ${binance_last_5_min_liquidations_value}')
 
         # Put your custom logic here
         # ...

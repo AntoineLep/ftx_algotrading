@@ -42,11 +42,11 @@ class CryptofeedService(object):
 
     @staticmethod
     def start_cryptofeed():
-        async def liquidations(data, receipt):
+        async def liquidations_cb(data, receipt):
             # Add raw data to CryptofeedDataTypeEnum.LIQUIDATION_DATA queue
             CryptofeedService.data[CryptofeedDataTypeEnum.LIQUIDATIONS].put(data)
 
-        async def open_interest(data, receipt):
+        async def open_interest_cb(data, receipt):
             # Add raw data to CryptofeedDataTypeEnum.OPEN_INTEREST queue
             CryptofeedService.data[CryptofeedDataTypeEnum.OPEN_INTEREST].put(data)
 
@@ -74,7 +74,8 @@ class CryptofeedService(object):
 
                 try:
                     f.add_feed(exchange_class(subscription={LIQUIDATIONS: symbols, OPEN_INTEREST: symbols},
-                                              callbacks={LIQUIDATIONS: liquidations, OPEN_INTEREST: open_interest}))
+                                              callbacks={LIQUIDATIONS: liquidations_cb,
+                                                         OPEN_INTEREST: open_interest_cb}))
                     print(" Done")
                 except Exception as e:
                     print(e, exchange_string)
