@@ -6,7 +6,6 @@ from typing import List
 from core.strategy.strategy import Strategy
 from strategies.cryptofeed_strategy.cryptofeed_service import CryptofeedService
 from strategies.cryptofeed_strategy.enums.cryptofeed_data_type_enum import CryptofeedDataTypeEnum
-from strategies.cryptofeed_strategy.enums.cryptofeed_exchange_enum import CryptofeedExchangeEnum
 from tools.utils import flatten
 from cryptofeed.types import Liquidation
 

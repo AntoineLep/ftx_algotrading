@@ -7,7 +7,7 @@ from strategies.listing_sniper.listing_sniper import ListingSniper
 from strategies.multi_coin_abnormal_volume_tracker.multi_coin_abnormal_volume_tracker \
     import MultiCoinAbnormalVolumeTracker
 
-strategy = CryptofeedStrategy()
+strategy = MultiCoinAbnormalVolumeTracker()
 
 log = {
     "level": "info",
