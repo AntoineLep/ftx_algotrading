@@ -155,7 +155,7 @@ class PositionDriver(object):
         """
 
         opened_duration = 0
-        position: PositionDataDict = Optional[None]
+        position: Optional[PositionDataDict] = None
 
         while self._t_run:
             for i in range(self._worker_sleep_time_between_loops):
@@ -180,7 +180,8 @@ class PositionDriver(object):
                              position["future"].upper() == self.market.upper()]
 
                 if len(positions) == 1:
-                    logging.info(f"FTX API response: {str(position[0])}")
+                    position = positions[0]
+                    logging.info(f"FTX API response: {str(position)}")
 
             except Exception as e:
                 logging.error("An error occurred when retrieving position:")
