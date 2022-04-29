@@ -267,7 +267,7 @@ class MultiCoinAbnormalVolumeTracker(Strategy):
                 green_candles_number += 1
 
             # Volume factor check
-            if stock_data_manager.stock_data_list[-i].volume / lma_avg_volume > applied_volume_factor is False:
+            if stock_data_manager.stock_data_list[-i].volume / lma_avg_volume < applied_volume_factor:
                 logging.info(f"Market:{pair}, volume individual candle check fail !")
                 return False  # Skip this coin
 
