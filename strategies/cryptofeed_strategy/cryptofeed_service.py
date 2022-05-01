@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import queue
 from typing import List
@@ -49,10 +48,6 @@ class CryptofeedService(object):
         async def open_interest_cb(data, receipt):
             # Add raw data to CryptofeedDataTypeEnum.OPEN_INTEREST queue
             CryptofeedService.data[CryptofeedDataTypeEnum.OPEN_INTEREST].put(data)
-
-        # There is no current event loop in thread
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
 
         f = FeedHandler()
         configured = []
