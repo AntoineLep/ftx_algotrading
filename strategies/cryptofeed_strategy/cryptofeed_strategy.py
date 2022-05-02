@@ -90,6 +90,13 @@ class CryptofeedStrategy(Strategy):
                         "sell": sum([round(data.quantity * data.price, 2) for data in sells])
                     }
 
+                    if self.computed_liquidations[exchange][timeframe][pair]['buy'] > 0 \
+                            or self.computed_liquidations[exchange][timeframe][pair]['sell'] > 0:
+                        logging.info(f"[{timeframe} sec - BUY] Liquidations: {exchange} - {pair} - "
+                                     f"${self.computed_liquidations[exchange][timeframe][pair]['buy']}")
+                        logging.info(f"[{timeframe} sec - SELL] Liquidations: {exchange} - {pair} - "
+                                     f"${self.computed_liquidations[exchange][timeframe][pair]['sell']}")
+
         # Put your custom logic here
         # ...
 
@@ -127,8 +134,10 @@ class CryptofeedStrategy(Strategy):
                                        liquidations))
 
         if side is not None:
-            liquidations = list(filter(lambda data: data.side == "sell" if side is CryptofeedSideEnum.SELL else "buy",
-                                       liquidations))
+            liquidations = list(
+                filter(lambda data: data.side == "sell" if side is CryptofeedSideEnum.SELL else data.side == "buy",
+                       liquidations)
+            )
 
         if max_age > -1:
             liquidations = list(filter(lambda data: data.timestamp > time.time() - max_age, liquidations))
