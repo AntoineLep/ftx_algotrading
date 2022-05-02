@@ -8,11 +8,28 @@ from core.strategy.strategy import Strategy
 from strategies.cryptofeed_strategy.cryptofeed_service import CryptofeedService
 from strategies.cryptofeed_strategy.enums.cryptofeed_data_type_enum import CryptofeedDataTypeEnum
 from strategies.cryptofeed_strategy.enums.cryptofeed_side_enum import CryptofeedSideEnum
-from tools.utils import flatten
 from cryptofeed.types import Liquidation
 
 SLEEP_TIME_BETWEEN_LOOPS = 10
 LIQUIDATION_HISTORY_RETENTION_TIME = 60 * 60  # 1 hour retention
+
+PAIRS_TO_TRACK = [
+    "SOL", "LUNA", "WAVES", "GMT", "AXS", "AVAX", "ZIL", "RUNE", "NEAR", "AAVE", "APE", "ETC", "FIL", "ATOM", "LOOKS",
+    "FTM", "ADA", "XRP", "CHZ", "LRC", "DOT", "VET", "GALA", "SUSHI", "FTT", "LINK", "MATIC", "SRM", "SAND", "COMP",
+    "EOS", "KNC", "LTC", "ALGO", "SKL", "BCH", "THETA", "SLP", "MANA", "DYDX", "GRT", "FLOW", "ONE", "NEO", "ZEC",
+    "PEOPLE", "SNX", "CVC", "ICP", "1INCH", "HBAR", "IMX", "CRO", "AR", "YFI", "RON", "OMG", "REN", "SHIB", "XTZ",
+    "ROSE", "CELO", "ANC", "QTUM", "CAKE", "ALPHA", "ICX", "BSV", "TRX", "EGLD", "CHR", "SXP", "RSR", "ENJ", "AUDIO",
+    "ENS", "MKR", "XLM", "RAY", "ZRX", "AGLD", "HNT", "ALICE", "PERP", "BAT", "XMR", "KSM", "STMX", "XEM", "MINA",
+    "KAVA", "HOT", "DASH", "OKB", "TLM", "STX", "SPELL", "STORJ", "GLMR", "TRU", "DENT", "ATLAS", "DODO", "SCRT", "BAL",
+    "ONT", "RNDR", "CVX", "BADGER", "SC", "C98", "IOTA", "MTL", "CLV", "BAND", "TOMO", "ALCX", "PUNDIX", "CREAM",
+    "LINA", "MAPS", "TONCOIN", "POLIS", "REEF", "FXS", "STEP", "FIDA", "HUM", "HT", "FLM", "BNT", "AMPL", "PROM",
+    "KSOS", "BIT", "BOBA", "DAWN", "RAMP", "YFII", "OXY", "SOS", "LEO", "ORBS", "MTA", "TRYB", "MCB", "EDEN", "MNGO",
+    "CONV", "BAO", "SECO", "CEL", "HOLY", "ROOK", "MER", "TULIP", "ASD", "KIN", "MOB", "SRN", "BTT", "MEDIA", "IOST",
+    "JASMY", "BTC", "ETH", "DOGE"
+]
+
+TIMEFRAMES = [60, 60 * 5]  # 1 min and 5 min
+EXCHANGES = ["FTX", "BINANCE_FUTURES"]
 
 
 class CryptofeedStrategy(Strategy):
@@ -37,6 +54,14 @@ class CryptofeedStrategy(Strategy):
         # Use CryptofeedService EXCHANGES global to configure the list of exchange to retrieve data on
         self.open_interest = {}
 
+        self.computed_liquidations = {}
+
+        # Init computed_liquidations object
+        for exchange in EXCHANGES:
+            self.computed_liquidations[exchange] = {}
+            for timeframe in TIMEFRAMES:
+                self.computed_liquidations[exchange][timeframe] = {}
+
         self._t: threading.Thread = threading.Thread(target=self.strategy_runner)
 
     def before_loop(self) -> None:
@@ -49,24 +74,22 @@ class CryptofeedStrategy(Strategy):
         self.perform_new_liquidations()
         self.perform_new_open_interest()
 
-        ftx_last_1_min_liquidations = self.get_liquidations(exchanges=["FTX"], max_age=60)
-        ftx_last_5_min_liquidations = self.get_liquidations(exchanges=["FTX"], max_age=60 * 5)
-        binance_last_1_min_liquidations = self.get_liquidations(exchanges=["BINANCE_FUTURES"], max_age=60)
-        binance_last_5_min_liquidations = self.get_liquidations(exchanges=["BINANCE_FUTURES"], max_age=60 * 5)
+        for exchange in EXCHANGES:
+            for timeframe in TIMEFRAMES:
+                for pair in PAIRS_TO_TRACK:
+                    buys = self.get_liquidations(exchanges=[exchange],
+                                                 symbols=[pair],
+                                                 side=CryptofeedSideEnum.BUY,
+                                                 max_age=timeframe)
+                    sells = self.get_liquidations(exchanges=[exchange],
+                                                  symbols=[pair],
+                                                  side=CryptofeedSideEnum.SELL,
+                                                  max_age=timeframe)
 
-        ftx_last_1_min_liquidations_value = sum([round(data.quantity * data.price, 2)
-                                                 for data in ftx_last_1_min_liquidations])
-        ftx_last_5_min_liquidations_value = sum([round(data.quantity * data.price, 2)
-                                                 for data in ftx_last_5_min_liquidations])
-        binance_last_1_min_liquidations_value = sum([round(data.quantity * data.price, 2)
-                                                     for data in binance_last_1_min_liquidations])
-        binance_last_5_min_liquidations_value = sum([round(data.quantity * data.price, 2)
-                                                     for data in binance_last_5_min_liquidations])
-
-        logging.info(f'[FTX] Liquidations in the last 1 minute: ${ftx_last_1_min_liquidations_value}')
-        logging.info(f'[FTX] Liquidations in the last 5 minutes: ${ftx_last_5_min_liquidations_value}')
-        logging.info(f'[BINANCE] Liquidations in the last 1 minute: ${binance_last_1_min_liquidations_value}')
-        logging.info(f'[BINANCE] Liquidations in the last 5 minutes: ${binance_last_5_min_liquidations_value}')
+                    self.computed_liquidations[exchange][timeframe][pair] = {
+                        "buy": sum([round(data.quantity * data.price, 2) for data in buys]),
+                        "sell": sum([round(data.quantity * data.price, 2) for data in sells])
+                    }
 
         # Put your custom logic here
         # ...
@@ -101,10 +124,12 @@ class CryptofeedStrategy(Strategy):
             liquidations = list(filter(lambda data: data.exchange in exchanges, liquidations))
 
         if symbols is not None:
-            liquidations = list(filter(lambda data: data.symbol in symbols, liquidations))
+            liquidations = list(filter(lambda data: any(data.symbol.startswith(sym + "-") for sym in symbols),
+                                       liquidations))
 
         if side is not None:
-            liquidations = list(filter(lambda data: data.side == side, liquidations))
+            liquidations = list(filter(lambda data: data.side == "sell" if side is CryptofeedSideEnum.SELL else "buy",
+                                       liquidations))
 
         if max_age > -1:
             liquidations = list(filter(lambda data: data.timestamp > time.time() - max_age, liquidations))
