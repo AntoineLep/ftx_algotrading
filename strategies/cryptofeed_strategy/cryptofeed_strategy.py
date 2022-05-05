@@ -1,13 +1,21 @@
 import logging
+import math
 import threading
 import time
 from typing import List
+import pandas as pd
+import stockstats
 
+from core.enums.side_enum import SideEnum
+from core.ftx.rest.ftx_rest_api import FtxRestApi
+from core.models.candle import Candle
 from core.strategy.strategy import Strategy
 from strategies.cryptofeed_strategy.cryptofeed_service import CryptofeedService
 from strategies.cryptofeed_strategy.enums.cryptofeed_data_type_enum import CryptofeedDataTypeEnum
 from strategies.cryptofeed_strategy.enums.cryptofeed_side_enum import CryptofeedSideEnum
 from cryptofeed.types import Liquidation
+
+from tools.utils import format_wallet_raw_data, format_ohlcv_raw_data
 
 SLEEP_TIME_BETWEEN_LOOPS = 10
 LIQUIDATION_HISTORY_RETENTION_TIME = 60 * 60  # 1 hour retention
@@ -40,8 +48,13 @@ class CryptofeedStrategy(Strategy):
         logging.info("TestStrategy run strategy")
         super(CryptofeedStrategy, self).__init__()
 
+        self.ftx_rest_api: FtxRestApi = FtxRestApi()
+
         # Array liquidation data
         self.liquidations: List[Liquidation] = []
+
+        # Dict [pair] -> PositionDriver
+        self.positions = {}
 
         # {
         #     exchange1: {
@@ -53,6 +66,9 @@ class CryptofeedStrategy(Strategy):
         # Use CryptofeedService EXCHANGES global to configure the list of exchange to retrieve data on
         self.open_interest = {}
 
+        for exchange in EXCHANGES:
+            self.open_interest[exchange] = {}
+
         self.computed_liquidations = {}
 
         # Init computed_liquidations object
@@ -60,6 +76,10 @@ class CryptofeedStrategy(Strategy):
             self.computed_liquidations[exchange] = {}
             for timeframe in TIMEFRAMES:
                 self.computed_liquidations[exchange][timeframe] = {}
+
+        self.timeframes_close_ts = {}
+        for timeframe in TIMEFRAMES:
+            self.timeframes_close_ts[timeframe] = time.time() + timeframe
 
         self._t: threading.Thread = threading.Thread(target=self.strategy_runner)
 
@@ -72,33 +92,17 @@ class CryptofeedStrategy(Strategy):
 
         self.perform_new_liquidations()
         self.perform_new_open_interest()
+        self.perform_liquidations()
 
-        for exchange in EXCHANGES:
-            for timeframe in TIMEFRAMES:
-                for pair in PAIRS_TO_TRACK:
-                    buys = self.get_liquidations(exchanges=[exchange],
-                                                 symbols=[pair],
-                                                 side=CryptofeedSideEnum.BUY,
-                                                 max_age=timeframe)
-                    sells = self.get_liquidations(exchanges=[exchange],
-                                                  symbols=[pair],
-                                                  side=CryptofeedSideEnum.SELL,
-                                                  max_age=timeframe)
+        for timeframe in TIMEFRAMES:
+            # Liquidation candle close
+            if time.time() > self.timeframes_close_ts[timeframe]:
+                # Set next timeframe end timestamp
+                self.timeframes_close_ts[timeframe] = time.time() + timeframe
 
-                    self.computed_liquidations[exchange][timeframe][pair] = {
-                        "buy": sum([round(data.quantity * data.price, 2) for data in buys]),
-                        "sell": sum([round(data.quantity * data.price, 2) for data in sells])
-                    }
-
-                    if self.computed_liquidations[exchange][timeframe][pair]['buy'] > 0 \
-                            or self.computed_liquidations[exchange][timeframe][pair]['sell'] > 0:
-                        logging.info(f"[{timeframe} sec - BUY] Liquidations: {exchange} - {pair} - "
-                                     f"${self.computed_liquidations[exchange][timeframe][pair]['buy']}")
-                        logging.info(f"[{timeframe} sec - SELL] Liquidations: {exchange} - {pair} - "
-                                     f"${self.computed_liquidations[exchange][timeframe][pair]['sell']}")
-
-        # Put your custom logic here
-        # ...
+                # ignore 5 min for the moment
+                if timeframe == 60:
+                    self.perform_data_analysis(timeframe)
 
         # Remove values older than LIQUIDATION_HISTORY_RETENTION_TIME
         self.liquidations = list(filter(lambda data: data.timestamp > time.time() - LIQUIDATION_HISTORY_RETENTION_TIME,
@@ -111,6 +115,64 @@ class CryptofeedStrategy(Strategy):
     def cleanup(self) -> None:
         """Clean strategy execution"""
         self._t.join()
+
+    def perform_data_analysis(self, timeframe: int):
+        for pair in PAIRS_TO_TRACK:
+            buy_liquidation_sum = sum(
+                [self.computed_liquidations[exchange][timeframe][pair]['buy'] for exchange in EXCHANGES])
+            sell_liquidation_sum = sum(
+                [self.computed_liquidations[exchange][timeframe][pair]['sell'] for exchange in EXCHANGES])
+
+            # Logging purposes
+            if buy_liquidation_sum > 0 or sell_liquidation_sum > 0:
+                logging.info(f"Liquidations for pair: {pair:<10} - buy: ${buy_liquidation_sum:<12} - "
+                             f"sell: ${sell_liquidation_sum:<12}")
+
+            if all([pair in self.open_interest[exchange] for exchange in EXCHANGES]):
+                oi_sum = sum([self.open_interest[exchange][pair]["open_interest"] for exchange in EXCHANGES])
+                logging.info(f"Open interest for pair: {pair:<10} - ${oi_sum}")
+
+                if buy_liquidation_sum > 30000 or sell_liquidation_sum > 30000:
+                    if sell_liquidation_sum * 500 < oi_sum < buy_liquidation_sum * 500:
+                        self.open_position(pair, SideEnum.BUY)
+                    elif buy_liquidation_sum * 500 < oi_sum < sell_liquidation_sum * 500:
+                        self.open_position(pair, SideEnum.SELL)
+
+    def open_position(self, pair: str, side: SideEnum) -> None:
+        # TODO: check a position on this coin is not yet opened
+        atr_14 = self.get_atr_14(pair)
+        logging.info(f"{pair} - atr_14:")
+        logging.info(atr_14)
+
+    def get_atr_14(self, pair):
+        # Retrieve 20 last candles
+        candles = self.ftx_rest_api.get(f"markets/{pair}-PERP/candles", {
+            "resolution": 60,
+            "limit": 20,
+            "start_time": math.floor(time.time() - 60 * 20)
+        })
+
+        candles = [format_ohlcv_raw_data(candle, 60) for candle in candles]
+        candles = [Candle(candle["id"], candle["time"], candle["open_price"], candle["high_price"], candle["low_price"],
+                          candle["close_price"], candle["volume"]) for candle in candles]
+
+        stock_stat_candles = [{
+            "date": candle.time,
+            "open": candle.open_price,
+            "high": candle.high_price,
+            "low": candle.low_price,
+            "close": candle.close_price,
+            "volume": candle.volume
+        } for candle in candles]
+
+        stock_indicators = stockstats.StockDataFrame.retype(pd.DataFrame(stock_stat_candles))
+        return stock_indicators["atr_14"]
+
+    def available_without_borrow(self) -> float:
+        response = self.ftx_rest_api.get("wallet/balances")
+        wallets = [format_wallet_raw_data(wallet) for wallet in response if wallet["coin"] == 'USD']
+
+        return wallets[0]["available_without_borrow"]
 
     def get_liquidations(self, exchanges: List[str] = None, symbols: List[str] = None, side: CryptofeedSideEnum = None,
                          max_age: int = -1):
@@ -143,6 +205,24 @@ class CryptofeedStrategy(Strategy):
             liquidations = list(filter(lambda data: data.timestamp > time.time() - max_age, liquidations))
 
         return liquidations
+
+    def perform_liquidations(self) -> None:
+        for exchange in EXCHANGES:
+            for timeframe in TIMEFRAMES:
+                for pair in PAIRS_TO_TRACK:
+                    buys = self.get_liquidations(exchanges=[exchange],
+                                                 symbols=[pair],
+                                                 side=CryptofeedSideEnum.BUY,
+                                                 max_age=timeframe)
+                    sells = self.get_liquidations(exchanges=[exchange],
+                                                  symbols=[pair],
+                                                  side=CryptofeedSideEnum.SELL,
+                                                  max_age=timeframe)
+
+                    self.computed_liquidations[exchange][timeframe][pair] = {
+                        "buy": sum([round(data.quantity * data.price, 2) for data in buys]),
+                        "sell": sum([round(data.quantity * data.price, 2) for data in sells])
+                    }
 
     def perform_new_liquidations(self) -> None:
         """
@@ -181,10 +261,8 @@ class CryptofeedStrategy(Strategy):
         new_oi = CryptofeedService.flush_liquidation_data_queue_items(CryptofeedDataTypeEnum.OPEN_INTEREST)
 
         for oi in new_oi:
-            if oi.exchange not in self.open_interest:
-                self.open_interest[oi.exchange] = {}
-
-            self.open_interest[oi.exchange][oi.symbol] = {
+            symbol = next(filter(lambda sym: oi.symbol.startswith(sym + "-"), PAIRS_TO_TRACK), None)
+            self.open_interest[oi.exchange][symbol] = {
                 "open_interest": oi.open_interest,
                 "timestamp": oi.timestamp
             }
