@@ -123,20 +123,19 @@ class CryptofeedStrategy(Strategy):
             sell_liquidation_sum = sum(
                 [self.computed_liquidations[exchange][timeframe][pair]['sell'] for exchange in EXCHANGES])
 
-            # Logging purposes
             if buy_liquidation_sum > 0 or sell_liquidation_sum > 0:
                 logging.info(f"Liquidations for pair: {pair:<10} - buy: ${buy_liquidation_sum:<12} - "
                              f"sell: ${sell_liquidation_sum:<12}")
 
-            if all([pair in self.open_interest[exchange] for exchange in EXCHANGES]):
-                oi_sum = sum([self.open_interest[exchange][pair]["open_interest"] for exchange in EXCHANGES])
-                logging.info(f"Open interest for pair: {pair:<10} - ${oi_sum}")
+                if all([pair in self.open_interest[exchange] for exchange in EXCHANGES]):
+                    oi_sum = sum([self.open_interest[exchange][pair]["open_interest"] for exchange in EXCHANGES])
+                    logging.info(f"Open interest for pair: {pair:<10} - ${oi_sum}")
 
-                if buy_liquidation_sum > 30000 or sell_liquidation_sum > 30000:
-                    if sell_liquidation_sum * 500 < oi_sum < buy_liquidation_sum * 500:
-                        self.open_position(pair, SideEnum.BUY)
-                    elif buy_liquidation_sum * 500 < oi_sum < sell_liquidation_sum * 500:
-                        self.open_position(pair, SideEnum.SELL)
+                    if buy_liquidation_sum > 30000 or sell_liquidation_sum > 30000:
+                        if sell_liquidation_sum * 500 < oi_sum < buy_liquidation_sum * 500:
+                            self.open_position(pair, SideEnum.BUY)
+                        elif buy_liquidation_sum * 500 < oi_sum < sell_liquidation_sum * 500:
+                            self.open_position(pair, SideEnum.SELL)
 
     def open_position(self, pair: str, side: SideEnum) -> None:
         # TODO: check a position on this coin is not yet opened
