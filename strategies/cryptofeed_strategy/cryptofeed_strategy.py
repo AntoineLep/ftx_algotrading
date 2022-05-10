@@ -1,24 +1,24 @@
 import logging
-import math
 import threading
 import time
 from typing import List
-import pandas as pd
-import stockstats
 
+from core.enums.order_type_enum import OrderTypeEnum
+from core.enums.position_state_enum import PositionStateEnum
 from core.enums.side_enum import SideEnum
+from core.enums.trigger_order_type_enum import TriggerOrderTypeEnum
 from core.ftx.rest.ftx_rest_api import FtxRestApi
-from core.models.candle import Candle
+from core.models.opening_config_dict import OpeningConfigDict
+from core.models.position_config_dict import PositionConfigDict
+from core.models.trigger_order_config_dict import TriggerOrderConfigDict
 from core.strategy.strategy import Strategy
+from core.trading.position_driver import PositionDriver
 from strategies.cryptofeed_strategy.cryptofeed_service import CryptofeedService
 from strategies.cryptofeed_strategy.enums.cryptofeed_data_type_enum import CryptofeedDataTypeEnum
 from strategies.cryptofeed_strategy.enums.cryptofeed_side_enum import CryptofeedSideEnum
 from cryptofeed.types import Liquidation
 
-from tools.utils import format_wallet_raw_data, format_ohlcv_raw_data
-
-SLEEP_TIME_BETWEEN_LOOPS = 10
-LIQUIDATION_HISTORY_RETENTION_TIME = 60 * 60  # 1 hour retention
+from strategies.cryptofeed_strategy.stock_utils import StockUtils
 
 PAIRS_TO_TRACK = [
     "SOL", "LUNA", "WAVES", "GMT", "AXS", "AVAX", "ZIL", "RUNE", "NEAR", "AAVE", "APE", "ETC", "FIL", "ATOM", "LOOKS",
@@ -35,8 +35,14 @@ PAIRS_TO_TRACK = [
     "JASMY", "BTC", "ETH", "DOGE"
 ]
 
-TIMEFRAMES = [60, 60 * 5]  # 1 min and 5 min
+SLEEP_TIME_BETWEEN_LOOPS = 10
+LIQUIDATION_HISTORY_RETENTION_TIME = 60 * 60  # 1 hour retention
+STOP_LOSS_PERCENTAGE = 1
+TAKE_PROFIT_PERCENTAGE_1 = 0.5
+TIMEFRAMES = [60]  # 1 min
 EXCHANGES = ["FTX", "BINANCE_FUTURES"]
+TRIGGER_LIQUIDATION_VALUE = 10000
+LIQUIDATIONS_OI_RATIO_THRESHOLD = 500
 
 
 class CryptofeedStrategy(Strategy):
@@ -81,6 +87,9 @@ class CryptofeedStrategy(Strategy):
         for timeframe in TIMEFRAMES:
             self.timeframes_close_ts[timeframe] = time.time() + timeframe
 
+        # Dict of running position drivers
+        self.position_drivers = {}
+
         self._t: threading.Thread = threading.Thread(target=self.strategy_runner)
 
     def before_loop(self) -> None:
@@ -99,10 +108,7 @@ class CryptofeedStrategy(Strategy):
             if time.time() > self.timeframes_close_ts[timeframe]:
                 # Set next timeframe end timestamp
                 self.timeframes_close_ts[timeframe] = time.time() + timeframe
-
-                # ignore 5 min for the moment
-                if timeframe == 60:
-                    self.perform_data_analysis(timeframe)
+                self.perform_data_analysis(timeframe)
 
         # Remove values older than LIQUIDATION_HISTORY_RETENTION_TIME
         self.liquidations = list(filter(lambda data: data.timestamp > time.time() - LIQUIDATION_HISTORY_RETENTION_TIME,
@@ -123,55 +129,85 @@ class CryptofeedStrategy(Strategy):
             sell_liquidation_sum = sum(
                 [self.computed_liquidations[exchange][timeframe][pair]['sell'] for exchange in EXCHANGES])
 
-            if buy_liquidation_sum > 0 or sell_liquidation_sum > 0:
+            if buy_liquidation_sum > 1000 or sell_liquidation_sum > 1000:
                 logging.info(f"Liquidations for pair: {pair:<10} - buy: ${buy_liquidation_sum:<12} - "
                              f"sell: ${sell_liquidation_sum:<12}")
 
+                # Check we got oi data for all listed exchanges
                 if all([pair in self.open_interest[exchange] for exchange in EXCHANGES]):
-                    oi_sum = sum([self.open_interest[exchange][pair]["open_interest"] for exchange in EXCHANGES])
-                    logging.info(f"Open interest for pair: {pair:<10} - ${oi_sum}")
 
-                    if buy_liquidation_sum > 30000 or sell_liquidation_sum > 30000:
-                        if sell_liquidation_sum * 500 < oi_sum < buy_liquidation_sum * 500:
+                    # Check the liquidations (buy or sell) exceeds the TRIGGER_LIQUIDATION_VALUE
+                    if buy_liquidation_sum > TRIGGER_LIQUIDATION_VALUE or \
+                            sell_liquidation_sum > TRIGGER_LIQUIDATION_VALUE:
+
+                        # Getting current price of pair
+                        current_price = StockUtils.get_market_price(self.ftx_rest_api, pair + '-PERP')
+
+                        # Sum the open interest usd value for listed exchanges
+                        oi_sum_usd = 0
+                        for exchange in EXCHANGES:
+                            cur_exchange_oi_usd = round(
+                                float(self.open_interest[exchange][pair]["open_interest"]) * current_price, 1)
+                            oi_sum_usd += cur_exchange_oi_usd
+                            logging.info(f'oi_sum_usd for {exchange} {pair} - ${cur_exchange_oi_usd:_}')
+
+                        logging.info(f'oi_sum_usd for {pair} - ${oi_sum_usd:_}')
+
+                        # Open position logic
+                        if sell_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD < oi_sum_usd < \
+                                buy_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD:
                             self.open_position(pair, SideEnum.BUY)
-                        elif buy_liquidation_sum * 500 < oi_sum < sell_liquidation_sum * 500:
+                        elif buy_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD < oi_sum_usd < \
+                                sell_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD:
                             self.open_position(pair, SideEnum.SELL)
 
     def open_position(self, pair: str, side: SideEnum) -> None:
-        # TODO: check a position on this coin is not yet opened
-        atr_14 = self.get_atr_14(pair)
-        logging.info(f"{pair} - atr_14:")
-        logging.info(atr_14)
+        # Don't reopen a position if there is a position driver already opened
+        if pair in self.position_drivers and self.position_drivers[pair].position_state == PositionStateEnum.OPENED:
+            return
 
-    def get_atr_14(self, pair):
-        # Retrieve 20 last candles
-        candles = self.ftx_rest_api.get(f"markets/{pair}-PERP/candles", {
-            "resolution": 60,
-            "limit": 20,
-            "start_time": math.floor(time.time() - 60 * 20)
-        })
+        atr_14 = StockUtils.get_atr_14(self.ftx_rest_api, pair)
+        logging.info(f"{pair} - atr_14: {atr_14.iloc[-1]}")
 
-        candles = [format_ohlcv_raw_data(candle, 60) for candle in candles]
-        candles = [Candle(candle["id"], candle["time"], candle["open_price"], candle["high_price"], candle["low_price"],
-                          candle["close_price"], candle["volume"]) for candle in candles]
+        # Getting current price of pair
+        current_price = StockUtils.get_market_price(self.ftx_rest_api, pair + '-PERP')
 
-        stock_stat_candles = [{
-            "date": candle.time,
-            "open": candle.open_price,
-            "high": candle.high_price,
-            "low": candle.low_price,
-            "close": candle.close_price,
-            "volume": candle.volume
-        } for candle in candles]
+        available_balance_without_borrow = StockUtils.get_available_balance_without_borrow(self.ftx_rest_api,)
+        percent_balance_per_trade = (available_balance_without_borrow * 20) * 0.01
+        logging.info(f'available without borrow: ${available_balance_without_borrow}')
+        position_size = percent_balance_per_trade / current_price
 
-        stock_indicators = stockstats.StockDataFrame.retype(pd.DataFrame(stock_stat_candles))
-        return stock_indicators["atr_14"]
+        openings: List[OpeningConfigDict] = [{
+            "price": None,
+            "size": position_size,
+            "type": OrderTypeEnum.MARKET
+        }]
+        sl: TriggerOrderConfigDict = {
+            "size": position_size,
+            "type": TriggerOrderTypeEnum.STOP,
+            "reduce_only": True,
+            "trigger_price": current_price - atr_14.iloc[-1] if
+            side == SideEnum.BUY else current_price + atr_14.iloc[-1],
+            "order_price": None,
+            "trail_value": None
+        }
+        tp1: TriggerOrderConfigDict = {
+            "size": position_size,
+            "type": TriggerOrderTypeEnum.TAKE_PROFIT,
+            "reduce_only": True,
+            "trigger_price": current_price + current_price * TAKE_PROFIT_PERCENTAGE_1 / 100 if
+            side == SideEnum.BUY else current_price - current_price * TAKE_PROFIT_PERCENTAGE_1 / 100,
+            "order_price": None,
+            "trail_value": None
+        }
+        position_config: PositionConfigDict = {
+            "openings": openings,
+            "trigger_orders": [sl, tp1],
+            "max_open_duration": 60 * 60 * 24
+        }
 
-    def available_without_borrow(self) -> float:
-        response = self.ftx_rest_api.get("wallet/balances")
-        wallets = [format_wallet_raw_data(wallet) for wallet in response if wallet["coin"] == 'USD']
-
-        return wallets[0]["available_without_borrow"]
+        self.position_drivers[pair] = PositionDriver(self.ftx_rest_api, 60)
+        self.position_drivers[pair].open_position(pair + '-PERP', side, position_config)
 
     def get_liquidations(self, exchanges: List[str] = None, symbols: List[str] = None, side: CryptofeedSideEnum = None,
                          max_age: int = -1):
@@ -206,6 +242,9 @@ class CryptofeedStrategy(Strategy):
         return liquidations
 
     def perform_liquidations(self) -> None:
+        """
+        Compute a sum of all liquidations into the configured timeframes for listed exchanges
+        """
         for exchange in EXCHANGES:
             for timeframe in TIMEFRAMES:
                 for pair in PAIRS_TO_TRACK:
@@ -261,10 +300,22 @@ class CryptofeedStrategy(Strategy):
 
         for oi in new_oi:
             symbol = next(filter(lambda sym: oi.symbol.startswith(sym + "-"), PAIRS_TO_TRACK), None)
-            self.open_interest[oi.exchange][symbol] = {
-                "open_interest": oi.open_interest,
-                "timestamp": oi.timestamp
-            }
+
+            # If the open interest data already exists
+            if symbol in self.open_interest[oi.exchange]:
+
+                # Check the new open interest value is not more than 3 times less than the last received value to
+                # prevent cryptofeed wrong data (eg. not perp future) from getting performed
+                if oi.open_interest * 3 > self.open_interest[oi.exchange][symbol]["open_interest"]:
+                    self.open_interest[oi.exchange][symbol] = {
+                        "open_interest": oi.open_interest,
+                        "timestamp": oi.timestamp
+                    }
+            else:
+                self.open_interest[oi.exchange][symbol] = {
+                    "open_interest": oi.open_interest,
+                    "timestamp": oi.timestamp
+                }
 
     def run(self) -> None:
         """
