@@ -37,8 +37,7 @@ PAIRS_TO_TRACK = [
 
 SLEEP_TIME_BETWEEN_LOOPS = 10
 LIQUIDATION_HISTORY_RETENTION_TIME = 60 * 60  # 1 hour retention
-STOP_LOSS_PERCENTAGE = 1
-TAKE_PROFIT_PERCENTAGE_1 = 0.5
+TAKE_PROFIT_PERCENTAGE_1 = 1
 TIMEFRAMES = [60]  # 1 min
 EXCHANGES = ["FTX", "BINANCE_FUTURES"]
 TRIGGER_LIQUIDATION_VALUE = 10000
@@ -154,12 +153,10 @@ class CryptofeedStrategy(Strategy):
                         logging.info(f'oi_sum_usd for {pair} - ${oi_sum_usd:_}')
 
                         # Open position logic
-                        if sell_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD < oi_sum_usd < \
-                                buy_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD:
-                            self.open_position(pair, SideEnum.BUY)
-                        elif buy_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD < oi_sum_usd < \
-                                sell_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD:
+                        if buy_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD > oi_sum_usd:
                             self.open_position(pair, SideEnum.SELL)
+                        elif sell_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD > oi_sum_usd:
+                            self.open_position(pair, SideEnum.BUY)
 
     def open_position(self, pair: str, side: SideEnum) -> None:
         # Don't reopen a position if there is a position driver already opened
@@ -173,7 +170,7 @@ class CryptofeedStrategy(Strategy):
         current_price = StockUtils.get_market_price(self.ftx_rest_api, pair + '-PERP')
 
         available_balance_without_borrow = StockUtils.get_available_balance_without_borrow(self.ftx_rest_api,)
-        percent_balance_per_trade = (available_balance_without_borrow * 20) * 0.01
+        percent_balance_per_trade = (available_balance_without_borrow * 20) * 0.001
         logging.info(f'available without borrow: ${available_balance_without_borrow}')
         position_size = percent_balance_per_trade / current_price
 
