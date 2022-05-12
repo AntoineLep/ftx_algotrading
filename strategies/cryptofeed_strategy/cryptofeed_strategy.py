@@ -3,6 +3,8 @@ import threading
 import time
 from typing import List
 
+import pandas as pd
+
 from core.enums.order_type_enum import OrderTypeEnum
 from core.enums.position_state_enum import PositionStateEnum
 from core.enums.side_enum import SideEnum
@@ -21,7 +23,7 @@ from cryptofeed.types import Liquidation
 from strategies.cryptofeed_strategy.stock_utils import StockUtils
 
 PAIRS_TO_TRACK = [
-    "SOL", "LUNA", "WAVES", "GMT", "AXS", "AVAX", "ZIL", "RUNE", "NEAR", "AAVE", "APE", "ETC", "FIL", "ATOM", "LOOKS",
+    "SOL", "WAVES", "GMT", "AXS", "AVAX", "ZIL", "RUNE", "NEAR", "AAVE", "APE", "ETC", "FIL", "ATOM", "LOOKS",
     "FTM", "ADA", "XRP", "CHZ", "LRC", "DOT", "VET", "GALA", "SUSHI", "FTT", "LINK", "MATIC", "SRM", "SAND", "COMP",
     "EOS", "KNC", "LTC", "ALGO", "SKL", "BCH", "THETA", "SLP", "MANA", "DYDX", "GRT", "FLOW", "ONE", "NEO", "ZEC",
     "PEOPLE", "SNX", "CVC", "ICP", "1INCH", "HBAR", "IMX", "CRO", "AR", "YFI", "RON", "OMG", "REN", "SHIB", "XTZ",
@@ -42,6 +44,10 @@ TIMEFRAMES = [60]  # 1 min
 EXCHANGES = ["FTX", "BINANCE_FUTURES"]
 TRIGGER_LIQUIDATION_VALUE = 10000
 LIQUIDATIONS_OI_RATIO_THRESHOLD = 500
+MAX_SIMULTANEOUSLY_OPENED_POSITIONS = 0
+STOP_LOSS_ATR = 1
+RISK_PER_TRADE = 0.05
+TAKE_PROFIT_ATR = 3
 
 
 class CryptofeedStrategy(Strategy):
@@ -158,9 +164,26 @@ class CryptofeedStrategy(Strategy):
                         elif sell_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD > oi_sum_usd:
                             self.open_position(pair, SideEnum.BUY)
 
+    @staticmethod
+    def compute_quantity(current_price: float, atr_14: pd.DataFrame, available_balance_without_borrow: float,
+                         side: SideEnum) -> float:
+        stop = current_price - (atr_14.iloc[-1] * STOP_LOSS_ATR if side == SideEnum.BUY else
+                                atr_14.iloc[-1] * TAKE_PROFIT_ATR)
+        trade_risk = available_balance_without_borrow * RISK_PER_TRADE
+        entry_stop = current_price - stop
+        qty = trade_risk / entry_stop
+        return qty
+
     def open_position(self, pair: str, side: SideEnum) -> None:
         # Don't reopen a position if there is a position driver already opened
         if pair in self.position_drivers and self.position_drivers[pair].position_state == PositionStateEnum.OPENED:
+            return
+
+        opened_position_number = sum(1 if self.position_drivers[key] and
+                                     self.position_drivers[key].position_state == PositionStateEnum.OPENED
+                                     else 0 for key in self.position_drivers)
+
+        if opened_position_number >= MAX_SIMULTANEOUSLY_OPENED_POSITIONS:
             return
 
         atr_14 = StockUtils.get_atr_14(self.ftx_rest_api, pair)
@@ -170,30 +193,29 @@ class CryptofeedStrategy(Strategy):
         current_price = StockUtils.get_market_price(self.ftx_rest_api, pair + '-PERP')
 
         available_balance_without_borrow = StockUtils.get_available_balance_without_borrow(self.ftx_rest_api,)
-        percent_balance_per_trade = (available_balance_without_borrow * 20) * 0.001
         logging.info(f'available without borrow: ${available_balance_without_borrow}')
-        position_size = percent_balance_per_trade / current_price
+        quantity = CryptofeedStrategy.compute_quantity(current_price, atr_14, available_balance_without_borrow, side)
 
         openings: List[OpeningConfigDict] = [{
             "price": None,
-            "size": position_size,
+            "size": quantity,
             "type": OrderTypeEnum.MARKET
         }]
         sl: TriggerOrderConfigDict = {
-            "size": position_size,
+            "size": quantity,
             "type": TriggerOrderTypeEnum.STOP,
             "reduce_only": True,
-            "trigger_price": current_price - atr_14.iloc[-1] if
-            side == SideEnum.BUY else current_price + atr_14.iloc[-1],
+            "trigger_price": current_price - (atr_14.iloc[-1] * STOP_LOSS_ATR) if side == SideEnum.BUY
+            else current_price + atr_14.iloc[-1],
             "order_price": None,
             "trail_value": None
         }
         tp1: TriggerOrderConfigDict = {
-            "size": position_size,
+            "size": quantity,
             "type": TriggerOrderTypeEnum.TAKE_PROFIT,
             "reduce_only": True,
-            "trigger_price": current_price + current_price * TAKE_PROFIT_PERCENTAGE_1 / 100 if
-            side == SideEnum.BUY else current_price - current_price * TAKE_PROFIT_PERCENTAGE_1 / 100,
+            "trigger_price": current_price + (atr_14.iloc[-1] * TAKE_PROFIT_ATR) if side == SideEnum.BUY
+            else current_price - (atr_14.iloc[-1] * TAKE_PROFIT_ATR),
             "order_price": None,
             "trail_value": None
         }

@@ -65,7 +65,7 @@ class CryptofeedService(object):
                                                                                              OPEN_INTEREST]):
                 configured.append(exchange_string)
                 print(f"Configuring {exchange_string}...", end='')
-                symbols = [sym for sym in exchange_class.symbols() if 'PINDEX' not in sym]
+                symbols = [sym for sym in exchange_class.symbols() if 'PINDEX' not in sym and 'LUNA' not in sym]
 
                 try:
                     f.add_feed(exchange_class(subscription={LIQUIDATIONS: symbols, OPEN_INTEREST: symbols},
