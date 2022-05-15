@@ -20,7 +20,7 @@ from strategies.multi_coin_abnormal_volume_tracker.models.pair_manager_dict impo
 from tools.utils import format_wallet_raw_data, format_market_raw_data
 
 PAIRS_TO_TRACK = [
-    "SOL-PERP", "LUNA-PERP", "WAVES-PERP", "GMT-PERP", "AXS-PERP", "AVAX-PERP", "ZIL-PERP",
+    "SOL-PERP", "WAVES-PERP", "GMT-PERP", "AXS-PERP", "AVAX-PERP", "ZIL-PERP",
     "RUNE-PERP", "NEAR-PERP", "AAVE-PERP", "APE-PERP", "ETC-PERP", "FIL-PERP", "ATOM-PERP", "LOOKS-PERP", "FTM-PERP",
     "ADA-PERP", "XRP-PERP", "CHZ-PERP", "LRC-PERP", "DOT-PERP", "VET-PERP", "GALA-PERP", "SUSHI-PERP", "FTT-PERP",
     "LINK-PERP", "MATIC-PERP", "SRM-PERP", "SAND-PERP", "COMP-PERP", "EOS-PERP", "KNC-PERP", "LTC-PERP",

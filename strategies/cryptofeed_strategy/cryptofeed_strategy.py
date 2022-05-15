@@ -129,40 +129,44 @@ class CryptofeedStrategy(Strategy):
 
     def perform_data_analysis(self, timeframe: int):
         for pair in PAIRS_TO_TRACK:
-            buy_liquidation_sum = sum(
-                [self.computed_liquidations[exchange][timeframe][pair]['buy'] for exchange in EXCHANGES])
-            sell_liquidation_sum = sum(
-                [self.computed_liquidations[exchange][timeframe][pair]['sell'] for exchange in EXCHANGES])
+            try:
+                buy_liquidation_sum = sum(
+                    [self.computed_liquidations[exchange][timeframe][pair]['buy'] for exchange in EXCHANGES])
+                sell_liquidation_sum = sum(
+                    [self.computed_liquidations[exchange][timeframe][pair]['sell'] for exchange in EXCHANGES])
 
-            if buy_liquidation_sum > 1000 or sell_liquidation_sum > 1000:
-                logging.info(f"Liquidations for pair: {pair:<10} - buy: ${buy_liquidation_sum:<12} - "
-                             f"sell: ${sell_liquidation_sum:<12}")
+                if buy_liquidation_sum > 1000 or sell_liquidation_sum > 1000:
+                    logging.info(f"Liquidations for pair: {pair:<10} - buy: ${buy_liquidation_sum:<12} - "
+                                 f"sell: ${sell_liquidation_sum:<12}")
 
-                # Check we got oi data for all listed exchanges
-                if all([pair in self.open_interest[exchange] for exchange in EXCHANGES]):
+                    # Check we got oi data for all listed exchanges
+                    if all([pair in self.open_interest[exchange] for exchange in EXCHANGES]):
 
-                    # Check the liquidations (buy or sell) exceeds the TRIGGER_LIQUIDATION_VALUE
-                    if buy_liquidation_sum > TRIGGER_LIQUIDATION_VALUE or \
-                            sell_liquidation_sum > TRIGGER_LIQUIDATION_VALUE:
+                        # Check the liquidations (buy or sell) exceeds the TRIGGER_LIQUIDATION_VALUE
+                        if buy_liquidation_sum > TRIGGER_LIQUIDATION_VALUE or \
+                                sell_liquidation_sum > TRIGGER_LIQUIDATION_VALUE:
 
-                        # Getting current price of pair
-                        current_price = StockUtils.get_market_price(self.ftx_rest_api, pair + '-PERP')
+                            # Getting current price of pair
+                            current_price = StockUtils.get_market_price(self.ftx_rest_api, pair + '-PERP')
 
-                        # Sum the open interest usd value for listed exchanges
-                        oi_sum_usd = 0
-                        for exchange in EXCHANGES:
-                            cur_exchange_oi_usd = round(
-                                float(self.open_interest[exchange][pair]["open_interest"]) * current_price, 1)
-                            oi_sum_usd += cur_exchange_oi_usd
-                            logging.info(f'oi_sum_usd for {exchange} {pair} - ${cur_exchange_oi_usd:_}')
+                            # Sum the open interest usd value for listed exchanges
+                            oi_sum_usd = 0
+                            for exchange in EXCHANGES:
+                                cur_exchange_oi_usd = round(
+                                    float(self.open_interest[exchange][pair]["open_interest"]) * current_price, 1)
+                                oi_sum_usd += cur_exchange_oi_usd
+                                logging.info(f'oi_sum_usd for {exchange} {pair} - ${cur_exchange_oi_usd:_}')
 
-                        logging.info(f'oi_sum_usd for {pair} - ${oi_sum_usd:_}')
+                            logging.info(f'oi_sum_usd for {pair} - ${oi_sum_usd:_}')
 
-                        # Open position logic
-                        if buy_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD > oi_sum_usd:
-                            self.open_position(pair, SideEnum.SELL)
-                        elif sell_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD > oi_sum_usd:
-                            self.open_position(pair, SideEnum.BUY)
+                            # Open position logic
+                            if buy_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD > oi_sum_usd:
+                                self.open_position(pair, SideEnum.SELL)
+                            elif sell_liquidation_sum * LIQUIDATIONS_OI_RATIO_THRESHOLD > oi_sum_usd:
+                                self.open_position(pair, SideEnum.BUY)
+            except Exception as e:
+                logging.error(e)
+                pass
 
     @staticmethod
     def compute_quantity(current_price: float, atr_14: pd.DataFrame, available_balance_without_borrow: float,
