@@ -49,34 +49,41 @@ class CryptofeedService(object):
             # Add raw data to CryptofeedDataTypeEnum.OPEN_INTEREST queue
             CryptofeedService.data[CryptofeedDataTypeEnum.OPEN_INTEREST].put(data)
 
-        f = FeedHandler()
-        configured = []
+        while True:
+            try:
+                f = FeedHandler()
+                configured = []
 
-        print("Querying exchange metadata")
-        for exchange_string, exchange_class in EXCHANGE_MAP.items():
+                print("Querying exchange metadata")
+                for exchange_string, exchange_class in EXCHANGE_MAP.items():
 
-            if exchange_string not in EXCHANGES:
-                continue
+                    if exchange_string not in EXCHANGES:
+                        continue
 
-            if exchange_string in ['BITFLYER', 'EXX', 'OKEX']:  # We have issues with these exchanges
-                continue
+                    if exchange_string in ['BITFLYER', 'EXX', 'OKEX']:  # We have issues with these exchanges
+                        continue
 
-            if all(channel in exchange_class.info()['channels']['websocket'] for channel in [LIQUIDATIONS,
-                                                                                             OPEN_INTEREST]):
-                configured.append(exchange_string)
-                print(f"Configuring {exchange_string}...", end='')
-                symbols = [sym for sym in exchange_class.symbols() if 'PINDEX' not in sym and 'LUNA' not in sym]
+                    if all(channel in exchange_class.info()['channels']['websocket'] for channel in [LIQUIDATIONS,
+                                                                                                     OPEN_INTEREST]):
+                        configured.append(exchange_string)
+                        print(f"Configuring {exchange_string}...", end='')
+                        symbols = [sym for sym in exchange_class.symbols() if 'PINDEX' not in sym and 'LUNA' not in sym]
 
-                try:
-                    f.add_feed(exchange_class(subscription={LIQUIDATIONS: symbols, OPEN_INTEREST: symbols},
-                                              callbacks={LIQUIDATIONS: liquidations_cb,
-                                                         OPEN_INTEREST: open_interest_cb}))
-                    print(" Done")
-                except Exception as e:
-                    print(e, exchange_string)
-                    pass
+                        try:
+                            f.add_feed(exchange_class(subscription={LIQUIDATIONS: symbols, OPEN_INTEREST: symbols},
+                                                      callbacks={LIQUIDATIONS: liquidations_cb,
+                                                                 OPEN_INTEREST: open_interest_cb}))
+                            print(" Done")
+                        except Exception as e:
+                            print(e, exchange_string)
+                            pass
 
-        print(configured)
+                print(configured)
 
-        print("Starting feedhandler for exchanges:", ', '.join(configured))
-        f.run(install_signal_handlers=False)
+                print("Starting feedhandler for exchanges:", ', '.join(configured))
+                f.run(install_signal_handlers=False)
+            except KeyboardInterrupt:  # pragma: no cover
+                raise
+            except Exception as e:
+                logging.error(e)
+                pass
