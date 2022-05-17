@@ -190,7 +190,8 @@ class CryptofeedStrategy(Strategy):
         if opened_position_number >= MAX_SIMULTANEOUSLY_OPENED_POSITIONS:
             return
 
-        atr_14 = StockUtils.get_atr_14(self.ftx_rest_api, pair)
+        stockstats_candles = StockUtils.get_last_x_stockstats_candles(self.ftx_rest_api, pair, 20)
+        atr_14 = StockUtils.get_atr_14(stockstats_candles)
         logging.info(f"{pair} - atr_14: {atr_14.iloc[-1]}")
 
         # Getting current price of pair

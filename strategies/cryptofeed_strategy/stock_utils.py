@@ -1,5 +1,6 @@
 import math
 import time
+from typing import List, Tuple
 
 import pandas as pd
 import stockstats
@@ -26,26 +27,27 @@ class StockUtils(object):
         return market_data.get("price")
 
     @staticmethod
-    def get_atr_14(ftx_rest_api: FtxRestApi, pair: str) -> pd.DataFrame:
+    def get_last_x_stockstats_candles(ftx_rest_api: FtxRestApi, pair: str, x: int) -> List:
         """
-        Get the atr 14 stockstat indicator
+        Get the last x stockstats candles indicator
 
         :param ftx_rest_api: a FTX rest api instance
-        :param pair: The pair to get the atr 14 stockstat indicator for
-        :return: The atr 14 stockstat indicator
+        :param pair: The pair to get the candles for
+        :param x: The number of candles to get
+        :return: The last x stockstats candles
         """
-        # Retrieve 20 last candles
+        # Retrieve x last candles
         candles = ftx_rest_api.get(f"markets/{pair}-PERP/candles", {
             "resolution": 60,
-            "limit": 20,
-            "start_time": math.floor(time.time() - 60 * 20)
+            "limit": x,
+            "start_time": math.floor(time.time() - 60 * x)
         })
 
         candles = [format_ohlcv_raw_data(candle, 60) for candle in candles]
         candles = [Candle(candle["id"], candle["time"], candle["open_price"], candle["high_price"], candle["low_price"],
                           candle["close_price"], candle["volume"]) for candle in candles]
 
-        stock_stat_candles = [{
+        return [{
             "date": candle.time,
             "open": candle.open_price,
             "high": candle.high_price,
@@ -54,8 +56,29 @@ class StockUtils(object):
             "volume": candle.volume
         } for candle in candles]
 
+    @staticmethod
+    def get_atr_14(stock_stat_candles: List) -> pd.DataFrame:
+        """
+        Get the atr 14 stockstats indicator
+
+        :param stock_stat_candles: The candles to compute atr for
+        :return: The atr 14 stockstats indicator
+        """
+
         stock_indicators = stockstats.StockDataFrame.retype(pd.DataFrame(stock_stat_candles))
         return stock_indicators["atr_14"]
+
+    @staticmethod
+    def get_bollinger_bands(stock_stat_candles: List) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Get the Bollinger bands (up, down) stockstats indicator
+
+        :param stock_stat_candles: The candles to compute atr for
+        :return: The Bollinger bands (up, down) stockstats indicators
+        """
+
+        stock_indicators = stockstats.StockDataFrame.retype(pd.DataFrame(stock_stat_candles))
+        return stock_indicators["boll_ub"], stock_indicators["boll_lb"]
 
     @staticmethod
     def get_available_balance_without_borrow(ftx_rest_api: FtxRestApi) -> float:
