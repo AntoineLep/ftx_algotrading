@@ -4,6 +4,7 @@ import time
 from typing import List
 
 import pandas as pd
+from stockstats import StockDataFrame
 
 from core.enums.order_type_enum import OrderTypeEnum
 from core.enums.position_state_enum import PositionStateEnum
@@ -94,6 +95,8 @@ class CryptofeedStrategy(Strategy):
 
         # Dict of running position drivers
         self.position_drivers = {}
+
+        StockDataFrame.BOLL_STD_TIMES = 4
 
         self._t: threading.Thread = threading.Thread(target=self.strategy_runner)
 

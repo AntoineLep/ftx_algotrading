@@ -28,11 +28,11 @@ SAFE_LEVERAGE = 8  # Will be used in case of TWITTER_ACCOUNT answering to someon
 BASE_LEVERAGE = 15  # Will be used otherwise
 
 # First take profit
-TP1_TARGET_PERCENTAGE = 10
+TP1_TARGET_PERCENTAGE = 12  # old: 10
 TP1_SIZE_RATIO = 0.3
 
 # Second take profit
-TP2_TARGET_PERCENTAGE = 15
+TP2_TARGET_PERCENTAGE = 16  # old: 15
 TP2_SIZE_RATIO = 0.4
 
 # Last take profit
@@ -40,7 +40,7 @@ TP3_TARGET_PERCENTAGE = 20
 # TP3_SIZE_RATIO Will be filled with remaining position size
 
 # Stop loss
-SL_PERCENTAGE = 1
+SL_PERCENTAGE = 2  # old: 1
 
 MAX_OPEN_DURATION = 60 * 6
 
@@ -244,6 +244,13 @@ class TwitterElonMuskDogeTracker(Strategy):
         doge_related_words = ["doge", "dog", "shiba", "floki"]
         probable_related_words = ["moon", "mars", "hodl", "hold", "coin"]
         last_tweet["text"] = last_tweet["text"].lower()
+
+        spacex_doge_merch_words = ["spacex", "doge", "merch"]
+        if all(word in last_tweet["text"] for word in spacex_doge_merch_words) \
+                and str(last_tweet["text"]).startswith("@") is False:
+            logging.info("Doge merch tweet")
+            self.last_tweet_doge_oriented_probability = ProbabilityEnum.NO_DOUBT
+            return
 
         if str(last_tweet["text"]).startswith("@"):
             logging.info("Answering someone, can have weird market reaction")
