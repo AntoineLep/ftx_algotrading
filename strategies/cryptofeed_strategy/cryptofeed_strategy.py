@@ -24,7 +24,7 @@ from cryptofeed.types import Liquidation
 from strategies.cryptofeed_strategy.stock_utils import StockUtils
 
 PAIRS_TO_TRACK = [
-    "SOL", "WAVES", "GMT", "AXS", "AVAX", "ZIL", "RUNE", "NEAR", "AAVE", "APE", "ETC", "FIL", "ATOM", "LOOKS",
+    "SOL", "WAVES", "G", "AXS", "AVAX", "ZIL", "RUNE", "NEAR", "AAVE", "APE", "ETC", "FIL", "ATOM", "LOOKS",
     "FTM", "ADA", "XRP", "CHZ", "LRC", "DOT", "VET", "GALA", "SUSHI", "FTT", "LINK", "MATIC", "SRM", "SAND", "COMP",
     "EOS", "KNC", "LTC", "ALGO", "SKL", "BCH", "THETA", "SLP", "MANA", "DYDX", "GRT", "FLOW", "ONE", "NEO", "ZEC",
     "PEOPLE", "SNX", "CVC", "ICP", "1INCH", "HBAR", "IMX", "CRO", "AR", "YFI", "RON", "OMG", "REN", "SHIB", "XTZ",
@@ -32,10 +32,9 @@ PAIRS_TO_TRACK = [
     "ENS", "MKR", "XLM", "RAY", "ZRX", "AGLD", "HNT", "ALICE", "PERP", "BAT", "XMR", "KSM", "STMX", "XEM", "MINA",
     "KAVA", "HOT", "DASH", "OKB", "TLM", "STX", "SPELL", "STORJ", "GLMR", "TRU", "DENT", "ATLAS", "DODO", "SCRT", "BAL",
     "ONT", "RNDR", "CVX", "BADGER", "SC", "C98", "IOTA", "MTL", "CLV", "BAND", "TOMO", "ALCX", "PUNDIX", "CREAM",
-    "LINA", "MAPS", "TONCOIN", "POLIS", "REEF", "FXS", "STEP", "FIDA", "HUM", "HT", "FLM", "BNT", "AMPL", "PROM",
-    "KSOS", "BIT", "BOBA", "DAWN", "RAMP", "YFII", "OXY", "SOS", "LEO", "ORBS", "MTA", "TRYB", "MCB", "EDEN", "MNGO",
-    "CONV", "BAO", "SECO", "CEL", "HOLY", "ROOK", "MER", "TULIP", "ASD", "KIN", "MOB", "SRN", "BTT", "MEDIA", "IOST",
-    "JASMY", "BTC", "ETH", "DOGE"
+    "LINA", "MAPS", "TONCOIN", "POLIS", "REEF", "FXS", "STEP", "FIDA", "HT", "FLM", "BNT", "AMPL", "PROM",
+    "KSOS", "BIT", "BOBA", "DAWN", "RAMP", "YFII", "OXY", "SOS", "LEO", "TRYB", "EDEN", "MNGO", "SECO", "CEL", "HOLY",
+    "ASD", "MOB", "BTT", "MEDIA", "IOST", "JASMY", "BTC", "ETH", "DOGE"
 ]
 
 SLEEP_TIME_BETWEEN_LOOPS = 10
