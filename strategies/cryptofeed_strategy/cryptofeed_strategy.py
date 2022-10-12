@@ -33,8 +33,8 @@ PAIRS_TO_TRACK = [
     "KAVA", "HOT", "DASH", "OKB", "TLM", "STX", "SPELL", "STORJ", "GLMR", "TRU", "DENT", "ATLAS", "DODO", "SCRT", "BAL",
     "ONT", "RNDR", "CVX", "BADGER", "SC", "C98", "IOTA", "MTL", "CLV", "BAND", "TOMO", "ALCX", "PUNDIX", "CREAM",
     "LINA", "MAPS", "TONCOIN", "POLIS", "REEF", "FXS", "STEP", "FIDA", "HT", "FLM", "BNT", "AMPL", "PROM",
-    "KSOS", "BIT", "BOBA", "DAWN", "RAMP", "YFII", "OXY", "SOS", "LEO", "TRYB", "EDEN", "MNGO", "SECO", "CEL", "HOLY",
-    "ASD", "MOB", "BTT", "MEDIA", "IOST", "JASMY", "BTC", "ETH", "DOGE"
+    "KSOS", "BIT", "BOBA", "DAWN", "YFII", "OXY", "SOS", "LEO", "TRYB", "EDEN", "MNGO", "SECO", "CEL", "HOLY", "ASD",
+    "MOB", "BTT", "MEDIA", "IOST", "JASMY", "BTC", "ETH", "DOGE"
 ]
 
 SLEEP_TIME_BETWEEN_LOOPS = 10

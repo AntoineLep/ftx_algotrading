@@ -6,7 +6,7 @@ from core.strategy.strategy import Strategy
 from core.ftx.rest.ftx_rest_api import FtxRestApi
 
 # Trading pair to snipe
-MARKET_PAIR_TO_SNIPE = "CTX/USD"
+MARKET_PAIR_TO_SNIPE = "IP3/USD"
 
 # USD amount to invest on the coin to be listed
 # /!\ Make sure your wallet have more (twice is good) than this amount because due to the high demand,
