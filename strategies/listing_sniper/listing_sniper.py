@@ -12,6 +12,8 @@ MARKET_PAIR_TO_SNIPE = "APT/USD"
 # the order fill price can be higher than the computed one based on last stock data
 AMOUNT_TO_INVEST = 2000
 
+MAX_ASK_PRICE = 50  # If the price is already above MAX_ASK_PRICE, the sniping will be aborted
+
 # First take profit
 TP1_TARGET_PERCENTAGE = 500
 TP1_SIZE_RATIO = 0.3
@@ -25,7 +27,7 @@ TP3_TARGET_PERCENTAGE = 2000
 # TP3_SIZE_RATIO Will be filled with remaining position size
 
 # Stop loss
-SL_PERCENTAGE = 50
+SL_PERCENTAGE = 20
 
 
 class ListingSniper(Strategy):
@@ -66,6 +68,11 @@ class ListingSniper(Strategy):
             if order_size < m_response["minProvideSize"]:
                 raise Exception(f"Order computed size {order_size} is less than the minimum size "
                                 f"{m_response['minProvideSize']}")
+
+            if m_response["ask"] is not None and m_response["ask"] > MAX_ASK_PRICE:
+                self._sniped = True
+                logging.info(f"Sniping Aborted (price pumped too much) !")
+                return
 
             opening_order_params = {
                 "market": MARKET_PAIR_TO_SNIPE,
